@@ -12,6 +12,9 @@ window.__SCENE_ERROR = '';
 
 const stage = document.querySelector('#stage');
 const loadState = document.querySelector('#load-state');
+const railCount = document.querySelector('#rail-count');
+const railPrev = document.querySelector('#rail-prev');
+const railNext = document.querySelector('#rail-next');
 
 const scene = new THREE.Scene();
 window.__THREE_SCENE = scene;
@@ -104,6 +107,14 @@ function setRailTarget(index, immediate = false) {
     camera.updateProjectionMatrix();
     camera.lookAt(cardRail.currentTarget);
   }
+  updateRailControl();
+}
+
+function updateRailControl() {
+  if (!railCount || !cardRail.stops.length) return;
+  const index = String(cardRail.targetIndex + 1).padStart(2, '0');
+  const title = cardTitles[cardRail.targetIndex % cardTitles.length].split('\n')[0];
+  railCount.textContent = `${index} - ${title}`;
 }
 
 function buildCardRail(model) {
@@ -199,6 +210,9 @@ function moveRail(direction) {
   }
   setRailTarget(cardRail.targetIndex + direction);
 }
+
+railPrev?.addEventListener('click', () => moveRail(-1));
+railNext?.addEventListener('click', () => moveRail(1));
 
 window.addEventListener('wheel', (event) => {
   if (!cardRail.ready || Math.abs(event.deltaY) < 12) {
