@@ -348,6 +348,43 @@ function makeNebulaTexture(seedColorA, seedColorB) {
   return texture;
 }
 
+function makeParticleClusterTexture(seedColorA, seedColorB, seedColorC) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 640;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.globalCompositeOperation = 'screen';
+
+  for (let i = 0; i < 360; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.pow(Math.random(), 1.9) * 270;
+    const x = 320 + Math.cos(angle) * radius * (0.68 + Math.random() * 0.46);
+    const y = 320 + Math.sin(angle) * radius * (0.42 + Math.random() * 0.64);
+    const dot = 1.2 + Math.random() * 4.8;
+    const color = i % 3 === 0 ? seedColorA : i % 3 === 1 ? seedColorB : seedColorC;
+    ctx.fillStyle = color.replace('ALPHA', String(0.16 + Math.random() * 0.42));
+    ctx.beginPath();
+    ctx.arc(x, y, dot, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  for (let i = 0; i < 18; i++) {
+    const x = 190 + Math.random() * 260;
+    const y = 140 + Math.random() * 360;
+    const r = 80 + Math.random() * 140;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
+    glow.addColorStop(0, seedColorA.replace('ALPHA', '0.08'));
+    glow.addColorStop(1, seedColorB.replace('ALPHA', '0'));
+    ctx.fillStyle = glow;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 function addStarField() {
   const glow = makeGlowTexture();
   const dust = makeDustTexture();
@@ -541,6 +578,33 @@ function addStarField() {
   verticalStream(640, 3.8, -1.4, -5.4, 6.2, 0.68, 3.7, 0.40, deepGreen);
   verticalStream(420, 0.25, 4.4, -4.4, 5.6, 1.2, 2.6, 0.18, violetTeal, true);
 
+  const clusterTexA = makeParticleClusterTexture('rgba(40,230,255,ALPHA)', 'rgba(206,68,255,ALPHA)', 'rgba(50,255,168,ALPHA)');
+  const clusterTexB = makeParticleClusterTexture('rgba(50,255,156,ALPHA)', 'rgba(54,96,255,ALPHA)', 'rgba(255,150,78,ALPHA)');
+  const clusterTexC = makeParticleClusterTexture('rgba(155,86,255,ALPHA)', 'rgba(39,219,255,ALPHA)', 'rgba(255,82,178,ALPHA)');
+  [
+    { tex: clusterTexA, pos: [-3.9, 4.7, 3.2], rot: [0.12, -0.18, -0.22], scale: [4.9, 3.2, 1], opacity: 0.58, order: 4 },
+    { tex: clusterTexB, pos: [4.9, 3.9, 2.8], rot: [-0.06, 0.22, 0.18], scale: [5.8, 3.7, 1], opacity: 0.52, order: 4 },
+    { tex: clusterTexC, pos: [3.8, -2.7, 4.4], rot: [0.08, -0.12, -0.08], scale: [5.2, 3.1, 1], opacity: 0.42, order: 7 },
+    { tex: clusterTexA, pos: [-4.6, -3.6, 4.1], rot: [-0.10, 0.18, 0.28], scale: [4.6, 3.0, 1], opacity: 0.38, order: 7 },
+    { tex: clusterTexB, pos: [0.2, 6.4, 3.6], rot: [0.02, 0.02, 0.02], scale: [6.4, 2.3, 1], opacity: 0.40, order: 4 }
+  ].forEach((cluster) => {
+    const material = new THREE.MeshBasicMaterial({
+      map: cluster.tex,
+      transparent: true,
+      opacity: cluster.opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: cluster.order < 7,
+      side: THREE.DoubleSide
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+    mesh.position.set(...cluster.pos);
+    mesh.rotation.set(...cluster.rot);
+    mesh.scale.set(...cluster.scale);
+    mesh.renderOrder = cluster.order;
+    scene.add(mesh);
+  });
+
   const nebulaTexA = makeNebulaTexture('rgba(0,185,255,ALPHA)', 'rgba(160,45,255,ALPHA)');
   const nebulaTexB = makeNebulaTexture('rgba(0,255,145,ALPHA)', 'rgba(30,120,255,ALPHA)');
   [
@@ -635,7 +699,7 @@ function generatedCardTexture(index, tint) {
     noise.data[i] = value;
     noise.data[i + 1] = value;
     noise.data[i + 2] = value;
-    noise.data[i + 3] = 15;
+    noise.data[i + 3] = 10;
   }
   ctx.putImageData(noise, 0, 0);
 
@@ -827,7 +891,7 @@ function makeCardShader(label, source) {
         vec4 tex = vec4(texR.r, texBase.g, texB.b, texBase.a);
         float border = smoothstep(0.0, 0.055, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));
         float edge = (1.0 - border) * uEdgeBoost;
-        float grain = (hash(uv * 840.0 + uTime) - 0.5) * 0.055;
+        float grain = (hash(uv * 720.0 + uTime) - 0.5) * 0.034;
         float cloud = sin((uv.x + uv.y) * 15.0 + uTime * 0.18) * 0.5 + 0.5;
         float vignette = smoothstep(0.0, 0.20, uv.x) * smoothstep(0.0, 0.20, uv.y) *
           smoothstep(0.0, 0.20, 1.0 - uv.x) * smoothstep(0.0, 0.20, 1.0 - uv.y);
