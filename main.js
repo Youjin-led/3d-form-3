@@ -110,6 +110,7 @@ function buildCardRail(model) {
   const cards = [];
   const box = new THREE.Box3();
   const center = new THREE.Vector3();
+  const size = new THREE.Vector3();
   model.updateMatrixWorld(true);
   model.traverse((object) => {
     const match = object.name.match(/^spiral_project_card_(\d+)_image$/i);
@@ -118,13 +119,16 @@ function buildCardRail(model) {
     }
     box.setFromObject(object);
     box.getCenter(center);
+    box.getSize(size);
     cards.push({
       index: Number(match[1]),
-      center: center.clone()
+      center: center.clone(),
+      size: size.clone()
     });
   });
 
   cards.sort((a, b) => a.index - b.index);
+  addReadableCardText(cards);
   cardRail.stops = cards.map(({ center }, index) => {
     const radial = new THREE.Vector3(center.x, 0, center.z);
     if (radial.lengthSq() < 0.01) {
@@ -149,6 +153,32 @@ function buildCardRail(model) {
     target: stop.target.toArray(),
     zoom: stop.zoom
   }));
+}
+
+function addReadableCardText(cards) {
+  const textGroup = new THREE.Group();
+  textGroup.name = 'readable_project_card_text';
+  cards.forEach(({ index, center, size }, order) => {
+    const texture = generatedCardTextTexture(index);
+    const material = new THREE.SpriteMaterial({
+      map: texture,
+      transparent: true,
+      opacity: order === 0 ? 0.86 : 0.62,
+      depthWrite: false,
+      depthTest: true,
+      blending: THREE.AdditiveBlending
+    });
+    const sprite = new THREE.Sprite(material);
+    const radial = new THREE.Vector3(center.x, 0, center.z);
+    if (radial.lengthSq() < 0.01) radial.set(0, 0, 1);
+    radial.normalize();
+    sprite.position.copy(center).add(radial.multiplyScalar(0.11));
+    const width = Math.max(size.x, size.z, 2.2) * 0.78;
+    sprite.scale.set(width, width * 0.60, 1);
+    sprite.renderOrder = 5;
+    textGroup.add(sprite);
+  });
+  scene.add(textGroup);
 }
 
 function moveRail(direction) {
@@ -223,6 +253,7 @@ const loader = new GLTFLoader();
 const shaderClock = { value: 0 };
 const cardTextureCache = new Map();
 const cardBackTextureCache = new Map();
+const cardTextTextureCache = new Map();
 const cardTitles = [
   'SUSTAINABLE\nHORIZONS',
   'E.C.H.O.',
@@ -594,28 +625,57 @@ function generatedCardTexture(index, tint) {
   }
   ctx.putImageData(noise, 0, 0);
 
-  ctx.fillStyle = 'rgba(238, 246, 255, 0.82)';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(32, 220, 255, 0.45)';
-  ctx.shadowBlur = 18;
-  ctx.font = index % 3 === 1 ? '96px "Courier New", monospace' : '84px "Courier New", monospace';
-  const lines = cardTitles[index % cardTitles.length].split('\n');
-  const lineHeight = lines.length > 2 ? 78 : 88;
-  const startY = canvas.height / 2 - (lines.length - 1) * lineHeight / 2;
-  lines.forEach((line, lineIndex) => {
-    ctx.fillText(line, canvas.width / 2, startY + lineIndex * lineHeight);
-  });
-
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = 'rgba(238, 246, 255, 0.52)';
-  ctx.font = '34px "Courier New", monospace';
-  ctx.fillText(index % 2 ? 'AT / LAB' : 'WSJ', canvas.width / 2, canvas.height * 0.28);
+  ctx.globalCompositeOperation = 'screen';
+  ctx.strokeStyle = 'rgba(40, 220, 255, 0.12)';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 18; i++) {
+    const y = 120 + Math.random() * 360;
+    ctx.beginPath();
+    ctx.moveTo(120 + Math.random() * 200, y);
+    ctx.lineTo(640 + Math.random() * 260, y + THREE.MathUtils.randFloatSpread(8));
+    ctx.stroke();
+  }
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.needsUpdate = true;
   cardTextureCache.set(index, texture);
+  return texture;
+}
+
+function generatedCardTextTexture(index) {
+  if (cardTextTextureCache.has(index)) return cardTextTextureCache.get(index);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 614;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(20, 220, 255, 0.78)';
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = 'rgba(240, 252, 255, 0.84)';
+  ctx.font = index % 3 === 1 ? '96px "Courier New", monospace' : '82px "Courier New", monospace';
+  const lines = cardTitles[index % cardTitles.length].split('\n');
+  const lineHeight = lines.length > 2 ? 76 : 88;
+  const startY = canvas.height / 2 - (lines.length - 1) * lineHeight / 2;
+  lines.forEach((line, lineIndex) => {
+    ctx.fillText(line, canvas.width / 2, startY + lineIndex * lineHeight);
+    ctx.fillStyle = 'rgba(255, 80, 170, 0.22)';
+    ctx.fillText(line, canvas.width / 2 + 4, startY + lineIndex * lineHeight + 1);
+    ctx.fillStyle = 'rgba(80, 240, 255, 0.26)';
+    ctx.fillText(line, canvas.width / 2 - 5, startY + lineIndex * lineHeight - 1);
+    ctx.fillStyle = 'rgba(240, 252, 255, 0.84)';
+  });
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(240, 252, 255, 0.58)';
+  ctx.font = '34px "Courier New", monospace';
+  ctx.fillText(index % 2 ? 'AT / LAB' : 'WSJ', canvas.width / 2, canvas.height * 0.28);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  cardTextTextureCache.set(index, texture);
   return texture;
 }
 
