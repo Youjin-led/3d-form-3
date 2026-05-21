@@ -738,9 +738,6 @@ function makeCardShader(label, source) {
 
       void main() {
         vec2 uv = vUv;
-        if (!gl_FrontFacing) {
-          uv.x = 1.0 - uv.x;
-        }
         vec2 warp = vec2(
           sin(uv.y * 20.0 + uTime * 0.34),
           cos(uv.x * 17.0 - uTime * 0.30)
@@ -774,11 +771,11 @@ function makeCardShader(label, source) {
         base = pow(max(base, vec3(0.0)), vec3(1.24));
         base *= 1.08;
         base += grain;
-        float alpha = uOpacity * tex.a * (0.94 + edge * 0.06);
+        float alpha = max(uOpacity * tex.a * (0.94 + edge * 0.06), 0.94);
         gl_FragColor = vec4(base, alpha);
       }
     `,
-    transparent: true,
+    transparent: isEdge,
     depthWrite: true,
     side: THREE.DoubleSide
   });
