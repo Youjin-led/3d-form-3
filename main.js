@@ -356,12 +356,12 @@ function makeParticleClusterTexture(seedColorA, seedColorB, seedColorC) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.globalCompositeOperation = 'screen';
 
-  for (let i = 0; i < 360; i++) {
+  for (let i = 0; i < 240; i++) {
     const angle = Math.random() * Math.PI * 2;
     const radius = Math.pow(Math.random(), 1.9) * 270;
     const x = 320 + Math.cos(angle) * radius * (0.68 + Math.random() * 0.46);
     const y = 320 + Math.sin(angle) * radius * (0.42 + Math.random() * 0.64);
-    const dot = 1.2 + Math.random() * 4.8;
+    const dot = 1.2 + Math.random() * 4.2;
     const color = i % 3 === 0 ? seedColorA : i % 3 === 1 ? seedColorB : seedColorC;
     ctx.fillStyle = color.replace('ALPHA', String(0.16 + Math.random() * 0.42));
     ctx.beginPath();
@@ -369,7 +369,7 @@ function makeParticleClusterTexture(seedColorA, seedColorB, seedColorC) {
     ctx.fill();
   }
 
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 12; i++) {
     const x = 190 + Math.random() * 260;
     const y = 140 + Math.random() * 360;
     const r = 80 + Math.random() * 140;
