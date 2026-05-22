@@ -46,6 +46,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.82;
 stage.appendChild(renderer.domElement);
+addStarField();
 
 const composer = new EffectComposer(renderer);
 composer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
@@ -338,6 +339,29 @@ function makeDustTexture() {
   return texture;
 }
 
+function makeNebulaTexture(seedColorA, seedColorB) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, 512, 512);
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < 46; i++) {
+    const x = 150 + Math.random() * 260;
+    const y = 80 + Math.random() * 360;
+    const r = 55 + Math.random() * 150;
+    const color = Math.random() > 0.5 ? seedColorA : seedColorB;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, color.replace('ALPHA', String(0.035 + Math.random() * 0.05)));
+    g.addColorStop(1, color.replace('ALPHA', '0'));
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 function addStarField() {
   const glow = makeGlowTexture();
   const dust = makeDustTexture();
@@ -515,21 +539,45 @@ function addStarField() {
     new THREE.Color(0xff5fc4)
   ];
 
-  centralDust(1280, 17.0, 2.35, 3.35, 3.4, 0.30);
-  centralDust(520, 18.1, 3.8, 2.05, 2.6, 0.16, 0.25);
-  dustCloud(430, [-2.7, 3.5, 1.35], [1.7, 4.35, 1.28], 3.6, 0.30, violetTeal, [0.13, 0, 0]);
-  dustCloud(360, [2.45, 2.8, -1.15], [2.0, 4.8, 1.38], 3.3, 0.28, violetTeal, [-0.10, 0, 0]);
-  dustCloud(330, [-2.45, -3.0, 1.8], [1.9, 3.4, 1.32], 3.0, 0.24, deepGreen, [0.16, 0, 0]);
-  dustCloud(310, [2.95, -2.65, 1.45], [1.8, 3.2, 1.25], 3.2, 0.24, deepGreen, [-0.14, 0, 0]);
-  dustCloud(420, [0.2, 6.2, 2.25], [4.4, 1.45, 1.4], 2.8, 0.30, violetTeal);
-  dustCloud(290, [-1.05, 1.0, 4.5], [4.9, 7.2, 0.58], 2.2, 0.14, violetTeal, [0.04, 0, 0], true);
-  dustCloud(240, [3.0, -0.9, 4.05], [2.9, 5.3, 0.52], 2.3, 0.15, deepGreen, [-0.08, 0, 0], true);
-  dustCloud(350, [4.75, 5.0, 0.75], [3.2, 2.65, 1.0], 3.0, 0.32, violetTeal, [-0.18, 0, 0]);
-  dustCloud(250, [-4.3, 5.55, 1.65], [2.55, 2.35, 0.95], 2.8, 0.24, violetTeal, [0.13, 0, 0]);
-  dustCloud(230, [5.0, -0.15, 2.6], [1.85, 4.4, 0.72], 2.6, 0.20, deepGreen, [-0.10, 0, 0], true);
-  verticalStream(360, -3.65, 0.95, -5.4, 6.35, 0.58, 2.6, 0.28, violetTeal);
-  verticalStream(320, 3.65, -1.35, -5.1, 5.95, 0.55, 2.5, 0.24, deepGreen);
-  verticalStream(180, 0.18, 4.25, -4.1, 5.2, 1.0, 1.9, 0.11, violetTeal, true);
+  centralDust(2100, 17.6, 2.55, 3.55, 5.7, 0.46);
+  centralDust(900, 18.8, 4.15, 2.2, 3.7, 0.26, 0.25);
+  dustCloud(900, [-2.9, 3.6, 1.4], [2.0, 4.8, 1.5], 6.2, 0.50, violetTeal, [0.16, 0, 0]);
+  dustCloud(760, [2.55, 2.9, -1.2], [2.4, 5.4, 1.7], 5.4, 0.46, violetTeal, [-0.12, 0, 0]);
+  dustCloud(760, [-2.6, -3.1, 1.9], [2.2, 4.0, 1.6], 5.0, 0.40, deepGreen, [0.20, 0, 0]);
+  dustCloud(700, [3.1, -2.7, 1.6], [2.1, 3.8, 1.5], 5.5, 0.42, deepGreen, [-0.18, 0, 0]);
+  dustCloud(880, [0.4, 6.25, 2.4], [5.2, 1.8, 1.8], 4.4, 0.48, violetTeal);
+  dustCloud(680, [-1.0, 1.2, 4.6], [5.8, 8.4, 0.7], 2.9, 0.22, violetTeal, [0.05, 0, 0], true);
+  dustCloud(520, [3.1, -0.8, 4.2], [3.4, 6.4, 0.6], 3.2, 0.25, deepGreen, [-0.10, 0, 0], true);
+  dustCloud(760, [4.9, 5.2, 0.8], [3.8, 3.2, 1.2], 4.8, 0.54, violetTeal, [-0.22, 0, 0]);
+  dustCloud(560, [-4.6, 5.7, 1.8], [3.0, 2.8, 1.1], 4.2, 0.42, violetTeal, [0.16, 0, 0]);
+  dustCloud(520, [5.2, -0.1, 2.8], [2.2, 5.2, 0.9], 4.1, 0.36, deepGreen, [-0.12, 0, 0], true);
+  verticalStream(720, -3.8, 1.0, -5.7, 6.6, 0.72, 3.9, 0.44, violetTeal);
+  verticalStream(640, 3.8, -1.4, -5.4, 6.2, 0.68, 3.7, 0.40, deepGreen);
+  verticalStream(420, 0.25, 4.4, -4.4, 5.6, 1.2, 2.6, 0.18, violetTeal, true);
+
+  const nebulaTexA = makeNebulaTexture('rgba(0,185,255,ALPHA)', 'rgba(160,45,255,ALPHA)');
+  const nebulaTexB = makeNebulaTexture('rgba(0,255,145,ALPHA)', 'rgba(30,120,255,ALPHA)');
+  [
+    { tex: nebulaTexA, pos: [-5.2, -5.6, 2.9], rot: [0.3, 0.2, -0.55], scale: [7.0, 1.74, 1], opacity: 0.18 },
+    { tex: nebulaTexB, pos: [4.8, 4.5, -2.4], rot: [-0.2, 0.45, 0.72], scale: [6.4, 1.55, 1], opacity: 0.15 },
+    { tex: nebulaTexA, pos: [0.2, 7.1, 4.2], rot: [0.2, -0.35, 1.0], scale: [5.8, 1.36, 1], opacity: 0.12 },
+    { tex: nebulaTexB, pos: [3.8, -4.2, 3.8], rot: [-0.26, -0.24, 0.18], scale: [5.6, 1.34, 1], opacity: 0.12 }
+  ].forEach((cloud) => {
+    const material = new THREE.MeshBasicMaterial({
+      map: cloud.tex,
+      transparent: true,
+      opacity: cloud.opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+    mesh.position.set(...cloud.pos);
+    mesh.rotation.set(...cloud.rot);
+    mesh.scale.set(...cloud.scale);
+    mesh.renderOrder = 0;
+    scene.add(mesh);
+  });
 
   const lineMaterial = new THREE.LineBasicMaterial({
     color: 0x55dfff,
@@ -1078,7 +1126,6 @@ loadBlenderMaterialOverrides().then((materialOverrides) => loader.load(
 
     scene.add(model);
     addReferenceSpineAugmentation(model);
-    addStarField();
     buildCardRail(model);
 
     const box = new THREE.Box3().setFromObject(model);
