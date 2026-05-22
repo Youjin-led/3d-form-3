@@ -515,44 +515,6 @@ function addStarField() {
     new THREE.Color(0xff5fc4)
   ];
 
-  function volumetricShardCloud(count, center, spread, radius, palette, drift = [0, 0, 0]) {
-    const geometry = new THREE.IcosahedronGeometry(1, 1);
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0x122634,
-      emissiveIntensity: 0.34,
-      metalness: 0.12,
-      roughness: 0.48,
-      transparent: true,
-      opacity: 0.72,
-      vertexColors: true,
-      depthWrite: false
-    });
-    const mesh = new THREE.InstancedMesh(geometry, material, count);
-    const dummy = new THREE.Object3D();
-    for (let i = 0; i < count; i++) {
-      const t = Math.random();
-      const lane = Math.floor(Math.random() * 7) - 3;
-      const color = palette[Math.floor(Math.random() * palette.length)].clone();
-      color.offsetHSL(THREE.MathUtils.randFloatSpread(0.035), 0.08 + Math.random() * 0.18, -0.08 + Math.random() * 0.18);
-      dummy.position.set(
-        center[0] + THREE.MathUtils.randFloatSpread(spread[0]) + lane * drift[0],
-        center[1] + THREE.MathUtils.randFloatSpread(spread[1]) + Math.sin(t * Math.PI * 2) * drift[1],
-        center[2] + THREE.MathUtils.randFloatSpread(spread[2]) + lane * drift[2]
-      );
-      dummy.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-      const s = radius * (0.42 + Math.random() * 1.25);
-      dummy.scale.set(s * (0.75 + Math.random() * 0.8), s * (0.62 + Math.random() * 0.7), s * (0.72 + Math.random() * 0.9));
-      dummy.updateMatrix();
-      mesh.setMatrixAt(i, dummy.matrix);
-      mesh.setColorAt(i, color);
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    mesh.renderOrder = 1;
-    scene.add(mesh);
-  }
-
   centralDust(1280, 17.0, 2.35, 3.35, 3.4, 0.30);
   centralDust(520, 18.1, 3.8, 2.05, 2.6, 0.16, 0.25);
   dustCloud(430, [-2.7, 3.5, 1.35], [1.7, 4.35, 1.28], 3.6, 0.30, violetTeal, [0.13, 0, 0]);
@@ -568,10 +530,6 @@ function addStarField() {
   verticalStream(360, -3.65, 0.95, -5.4, 6.35, 0.58, 2.6, 0.28, violetTeal);
   verticalStream(320, 3.65, -1.35, -5.1, 5.95, 0.55, 2.5, 0.24, deepGreen);
   verticalStream(180, 0.18, 4.25, -4.1, 5.2, 1.0, 1.9, 0.11, violetTeal, true);
-  volumetricShardCloud(520, [-1.05, 1.65, 1.85], [3.2, 8.9, 1.6], 0.045, violetTeal, [0.10, 0.36, 0.045]);
-  volumetricShardCloud(360, [2.65, 2.65, -0.65], [2.6, 7.2, 1.4], 0.038, deepGreen, [-0.08, 0.28, -0.035]);
-  volumetricShardCloud(260, [0.2, 5.75, 2.35], [5.0, 1.8, 1.2], 0.040, violetTeal, [0.06, 0.18, 0.02]);
-  volumetricShardCloud(260, [0.25, -4.1, 2.15], [4.3, 2.2, 1.4], 0.040, deepGreen, [-0.06, 0.18, 0.02]);
 
   const lineMaterial = new THREE.LineBasicMaterial({
     color: 0x55dfff,
@@ -950,79 +908,64 @@ function addReferenceSpineAugmentation(model) {
     opacity: 0.72
   });
 
-  const bodyGeo = new THREE.IcosahedronGeometry(0.58, 2);
-  const lipGeo = new THREE.TorusGeometry(0.50, 0.052, 10, 42);
-  const processGeo = new THREE.ConeGeometry(0.14, 1.06, 8, 1);
-  const dorsalGeo = new THREE.ConeGeometry(0.11, 1.02, 7, 1);
-  const hookGeo = new THREE.CapsuleGeometry(0.085, 0.52, 4, 8);
-  const ribGeo = new THREE.CapsuleGeometry(0.075, 0.95, 4, 10);
+  const bodyGeo = new THREE.SphereGeometry(0.54, 28, 14);
+  const lipGeo = new THREE.TorusGeometry(0.50, 0.055, 10, 42);
+  const processGeo = new THREE.ConeGeometry(0.13, 0.86, 8, 1);
+  const hookGeo = new THREE.CapsuleGeometry(0.09, 0.46, 4, 8);
 
-  const count = 13;
+  const count = 10;
   for (let i = 0; i < count; i++) {
     const t = i / (count - 1);
-    const y = THREE.MathUtils.lerp(-5.25, 5.65, t);
-    const twist = t * Math.PI * 2.9 - 0.62;
-    const silhouette = Math.sin(t * Math.PI);
-    const x = Math.sin(twist) * 0.28;
-    const z = Math.cos(twist) * 0.22 + 0.12;
+    const y = THREE.MathUtils.lerp(-4.35, 4.65, t);
+    const twist = t * Math.PI * 2.3 - 0.55;
+    const x = Math.sin(twist) * 0.20;
+    const z = Math.cos(twist) * 0.18 + 0.20;
     const mat = i % 2 ? magentaMat : cyanMat;
 
     const body = new THREE.Mesh(bodyGeo, mat);
     body.position.set(x, y, z);
-    body.scale.set(0.72 + silhouette * 0.26, 0.26 + silhouette * 0.05, 0.40 + silhouette * 0.16);
-    body.rotation.set(0.20 * Math.sin(twist), twist * 0.20, 0.12 * Math.cos(twist));
+    body.scale.set(0.84 + Math.sin(t * Math.PI) * 0.16, 0.34, 0.48);
+    body.rotation.set(0.18 * Math.sin(twist), twist * 0.18, 0.08 * Math.cos(twist));
     body.renderOrder = 2;
     group.add(body);
 
     const upperLip = new THREE.Mesh(lipGeo, mat);
-    upperLip.position.set(x, y + 0.15, z + 0.02);
-    upperLip.scale.set(0.78 + silhouette * 0.18, 0.34 + silhouette * 0.08, 0.16);
+    upperLip.position.set(x, y + 0.17, z + 0.02);
+    upperLip.scale.set(0.88, 0.42, 0.18);
     upperLip.rotation.set(Math.PI / 2 + 0.08 * Math.sin(twist), 0, twist * 0.12);
     group.add(upperLip);
 
     const lowerLip = upperLip.clone();
-    lowerLip.position.y = y - 0.15;
+    lowerLip.position.y = y - 0.17;
     lowerLip.material = mat;
     group.add(lowerLip);
 
     const recess = new THREE.Mesh(bodyGeo, darkMat);
-    recess.position.set(x, y, z + 0.15);
-    recess.scale.set(0.38 + silhouette * 0.08, 0.09, 0.08);
+    recess.position.set(x, y, z + 0.13);
+    recess.scale.set(0.46, 0.12, 0.10);
     recess.rotation.copy(body.rotation);
     group.add(recess);
 
-    const dorsal = new THREE.Mesh(dorsalGeo, mat);
-    dorsal.position.set(x, y + 0.02, z - (0.40 + silhouette * 0.22));
-    dorsal.scale.set(1.0, 0.86 + silhouette * 0.42, 1.0);
-    dorsal.rotation.set(Math.PI / 2 + 0.12 * Math.sin(twist), 0.15 * Math.cos(twist), 0);
-    group.add(dorsal);
-
     [-1, 1].forEach((side) => {
       const process = new THREE.Mesh(processGeo, mat);
-      process.position.set(x + side * (0.50 + silhouette * 0.38), y + 0.03, z - 0.02);
-      process.scale.set(0.82, 0.84 + silhouette * 0.46, 1.0);
-      process.rotation.set(0.0, side * 0.18, side * (Math.PI / 2 + 0.36 + Math.sin(twist) * 0.12));
+      process.position.set(x + side * (0.58 + Math.sin(t * Math.PI) * 0.16), y + 0.03, z - 0.02);
+      process.scale.set(1.0, 0.78, 1.0);
+      process.rotation.set(0.0, 0.0, side * (Math.PI / 2 + 0.28));
       group.add(process);
 
       const hook = new THREE.Mesh(hookGeo, mat);
-      hook.position.set(x + side * (0.40 + silhouette * 0.18), y - 0.25, z + 0.18);
-      hook.rotation.set(0.34, side * 0.44, side * 1.25);
+      hook.position.set(x + side * 0.42, y - 0.24, z + 0.18);
+      hook.rotation.set(0.35, side * 0.38, side * 1.2);
       group.add(hook);
-
-      const rib = new THREE.Mesh(ribGeo, mat);
-      rib.position.set(x + side * (0.68 + silhouette * 0.35), y - 0.06, z + 0.02);
-      rib.scale.set(0.78, 0.78 + silhouette * 0.40, 0.78);
-      rib.rotation.set(0.14 * Math.cos(twist), side * 0.24, side * (Math.PI / 2 + 0.58));
-      group.add(rib);
     });
   }
 
   const box = new THREE.Box3().setFromObject(model);
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
-  group.position.set(center.x * 0.08, center.y * 0.02, 0.22);
-  group.scale.setScalar(Math.max(0.98, Math.min(1.26, size.y / 12.1)));
-  group.rotation.set(0.02, -0.12, 0.0);
+  group.position.set(center.x * 0.08, center.y * 0.04, 0.35);
+  group.scale.setScalar(Math.max(0.92, Math.min(1.16, size.y / 12.5)));
+  group.rotation.set(0.02, -0.08, 0.0);
   group.renderOrder = 2;
   scene.add(group);
   window.__SPINE_AUGMENT = {
