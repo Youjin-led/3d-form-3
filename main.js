@@ -1056,6 +1056,10 @@ loadBlenderMaterialOverrides().then((materialOverrides) => loader.load(
         object.visible = false;
         return;
       }
+      if (/hidden_nih_source/i.test(object.name)) {
+        object.visible = false;
+        return;
+      }
       if (/constellation/i.test(object.name)) {
         object.visible = false;
         return;
