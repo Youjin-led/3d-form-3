@@ -20,6 +20,8 @@ const RESTORE_SCENE_CARDS = true;
 const USE_SCENE_CARD_SOURCE_MATERIALS = false;
 const USE_BAKED_SCENE_CAMERA = true;
 const MATCH_PUBLISHED_CARD_LAYOUT = true;
+const PUBLISHED_CARD_TARGET_WIDTH = 3.85;
+const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const REFERENCE_CARD_LAYOUT = [
     {
         "name":  "spiral_project_card_00_edge",
@@ -702,17 +704,48 @@ function updateRailControl() {
 function applyPublishedCardLayout(model) {
   if (!MATCH_PUBLISHED_CARD_LAYOUT) return;
   const transforms = new Map(REFERENCE_CARD_LAYOUT.map((item) => [item.name, item]));
+  const cardObjectsByIndex = new Map();
   model.updateMatrixWorld(true);
   model.traverse((object) => {
     const transform = transforms.get(object.name);
     if (!transform) return;
-    object.position.fromArray(transform.position);
+    const position = new THREE.Vector3().fromArray(transform.position);
+    const radial = new THREE.Vector3(position.x, 0, position.z);
+    if (radial.lengthSq() < 0.001) {
+      radial.set(position.x >= 0 ? 1 : -1, 0, 0.25);
+    }
+    radial.normalize();
+    position.add(radial.multiplyScalar(PUBLISHED_CARD_DISTANCE_OFFSET));
+
+    object.position.copy(position);
     object.quaternion.fromArray(transform.quaternion);
     object.scale.fromArray(transform.scale);
     object.visible = true;
     object.updateMatrix();
     object.updateMatrixWorld(true);
+
+    const match = object.name.match(/^spiral_project_card_(\d+)_(image|edge)$/i);
+    if (match) {
+      const index = Number(match[1]);
+      if (!cardObjectsByIndex.has(index)) cardObjectsByIndex.set(index, []);
+      cardObjectsByIndex.get(index).push(object);
+    }
   });
+
+  cardObjectsByIndex.forEach((objects) => {
+    const image = objects.find((object) => /_image$/i.test(object.name));
+    if (!image?.geometry) return;
+    image.geometry.computeBoundingBox();
+    const localSize = image.geometry.boundingBox.getSize(new THREE.Vector3());
+    const localWidth = Math.max(localSize.x, localSize.y, 0.001);
+    const scaleFactor = PUBLISHED_CARD_TARGET_WIDTH / localWidth;
+    objects.forEach((object) => {
+      object.scale.multiplyScalar(scaleFactor);
+      object.updateMatrix();
+      object.updateMatrixWorld(true);
+    });
+  });
+
   model.updateMatrixWorld(true);
 }
 function buildCardRail(model) {
@@ -1844,6 +1877,7 @@ window.addEventListener('resize', () => {
   composer.setSize(window.innerWidth, window.innerHeight);
   bloomPass.setSize(window.innerWidth, window.innerHeight);
 });
+
 
 
 
