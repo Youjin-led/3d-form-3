@@ -1697,6 +1697,11 @@ loadBlenderMaterialOverrides().then((materialOverrides) => loader.load(
         object.visible = false;
         return;
       }
+      const repeatedVertebraMatch = object.name.match(/^real_nih_lumbar_vertebra_(\d+)_/i);
+      if (repeatedVertebraMatch && Number(repeatedVertebraMatch[1]) >= 12) {
+        object.visible = false;
+        return;
+      }
       if (BAKED_SPINE_VIEW && !RESTORE_SCENE_CARDS && /spiral_project_card|reference_card/i.test(object.name)) {
         object.visible = false;
         return;
