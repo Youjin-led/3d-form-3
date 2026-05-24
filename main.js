@@ -705,6 +705,7 @@ function applyPublishedCardLayout(model) {
   if (!MATCH_PUBLISHED_CARD_LAYOUT) return;
   const transforms = new Map(REFERENCE_CARD_LAYOUT.map((item) => [item.name, item]));
   const cardObjectsByIndex = new Map();
+  floatingCards.length = 0;
   model.updateMatrixWorld(true);
   model.traverse((object) => {
     const transform = transforms.get(object.name);
@@ -729,6 +730,13 @@ function applyPublishedCardLayout(model) {
       const index = Number(match[1]);
       if (!cardObjectsByIndex.has(index)) cardObjectsByIndex.set(index, []);
       cardObjectsByIndex.get(index).push(object);
+      floatingCards.push({
+        object,
+        index,
+        basePosition: object.position.clone(),
+        baseQuaternion: object.quaternion.clone(),
+        phase: index * 0.73 + (match[2] === 'edge' ? 0.04 : 0)
+      });
     }
   });
 
@@ -747,6 +755,42 @@ function applyPublishedCardLayout(model) {
   });
 
   model.updateMatrixWorld(true);
+  window.__FLOATING_CARDS = floatingCards.map(({ object, index }) => ({
+    name: object.name,
+    index
+  }));
+}
+
+function getCardFloatOffset(index, elapsed) {
+  const phase = index * 0.73;
+  const slow = elapsed * (0.34 + (index % 5) * 0.018) + phase;
+  const pulse = elapsed * (0.56 + (index % 3) * 0.025) + phase * 1.31;
+  return new THREE.Vector3(
+    Math.sin(slow) * 0.16 + Math.sin(pulse * 0.67) * 0.045,
+    Math.sin(pulse) * 0.105 + Math.cos(slow * 1.37) * 0.035,
+    Math.cos(slow * 0.92) * 0.135 + Math.sin(pulse * 0.54) * 0.04
+  );
+}
+
+function getCardFloatRotation(index, elapsed) {
+  const phase = index * 0.73;
+  return new THREE.Euler(
+    Math.sin(elapsed * 0.42 + phase) * 0.018,
+    Math.sin(elapsed * 0.37 + phase * 1.4) * 0.026,
+    Math.cos(elapsed * 0.45 + phase * 0.8) * 0.016,
+    'XYZ'
+  );
+}
+
+function updateFloatingCards(elapsed) {
+  if (!floatingCards.length) return;
+  floatingCards.forEach(({ object, index, basePosition, baseQuaternion }) => {
+    object.position.copy(basePosition).add(getCardFloatOffset(index, elapsed));
+    object.quaternion.copy(baseQuaternion).multiply(
+      new THREE.Quaternion().setFromEuler(getCardFloatRotation(index, elapsed))
+    );
+    object.updateMatrix();
+  });
 }
 function buildCardRail(model) {
   if (BAKED_SPINE_VIEW && USE_BAKED_SCENE_CAMERA) {
@@ -827,6 +871,7 @@ function addReadableCardText(cards) {
     const width = Math.max(size.x, size.z, 2.2) * (order === 0 ? 1.08 : 0.82);
     sprite.scale.set(width, width * 0.60, 1);
     sprite.userData.railIndex = order;
+    sprite.userData.floatBasePosition = sprite.position.clone();
     sprite.renderOrder = 5;
     cardTextSprites.push(sprite);
     textGroup.add(sprite);
@@ -841,6 +886,11 @@ function updateReadableCardText() {
     const distance = Math.abs((sprite.userData.railIndex ?? 0) - active);
     const targetOpacity = distance === 0 ? 0.96 : distance === 1 ? 0.18 : 0.035;
     sprite.material.opacity = THREE.MathUtils.lerp(sprite.material.opacity, targetOpacity, 0.12);
+    if (sprite.userData.floatBasePosition) {
+      sprite.position.copy(sprite.userData.floatBasePosition).add(
+        getCardFloatOffset(sprite.userData.railIndex ?? 0, shaderClock.value)
+      );
+    }
   });
 }
 
@@ -921,6 +971,7 @@ const cardTextureCache = new Map();
 const cardBackTextureCache = new Map();
 const cardTextTextureCache = new Map();
 const cardTextSprites = [];
+const floatingCards = [];
 const cardTitles = [
   'SUSTAINABLE\nHORIZONS',
   'E.C.H.O.',
@@ -1847,6 +1898,7 @@ function animate() {
   violetLight.intensity = 5.0 + Math.sin(elapsed * 0.43) * 0.35;
   spineMagenta.intensity = 5.8 + Math.sin(elapsed * 0.9) * 0.6;
   spineBlue.intensity = 5.2 + Math.cos(elapsed * 0.72) * 0.5;
+  updateFloatingCards(elapsed);
   if (cardRail.ready) {
     cardRail.currentPosition.lerp(cardRail.targetPosition, 0.065);
     cardRail.currentTarget.lerp(cardRail.targetTarget, 0.065);
