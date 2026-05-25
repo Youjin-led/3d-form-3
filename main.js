@@ -706,6 +706,7 @@ function applyPublishedCardLayout(model) {
   const transforms = new Map(REFERENCE_CARD_LAYOUT.map((item) => [item.name, item]));
   const cardObjectsByIndex = new Map();
   floatingCards.length = 0;
+  cardBodies.length = 0;
   model.updateMatrixWorld(true);
   model.traverse((object) => {
     const transform = transforms.get(object.name);
@@ -754,6 +755,20 @@ function applyPublishedCardLayout(model) {
     });
   });
 
+  cardObjectsByIndex.forEach((objects, index) => {
+    const image = objects.find((object) => /_image$/i.test(object.name)) || objects[0];
+    if (!image) return;
+    cardBodies.push({
+      index,
+      objects,
+      basePosition: image.position.clone(),
+      collisionOffset: new THREE.Vector3(),
+      collisionVelocity: new THREE.Vector3(),
+      targetPosition: image.position.clone(),
+      radius: 2.42
+    });
+  });
+
   model.updateMatrixWorld(true);
   window.__FLOATING_CARDS = floatingCards.map(({ object, index }) => ({
     name: object.name,
@@ -784,10 +799,110 @@ function getCardFloatRotation(index, elapsed) {
   );
 }
 
+function getBodyForCard(index) {
+  return cardBodies.find((body) => body.index === index);
+}
+
+function getCardRouteOffset(index, elapsed, basePosition) {
+  const body = getBodyForCard(index);
+  const collisionOffset = body ? body.collisionOffset : new THREE.Vector3();
+  return getCardFloatOffset(index, elapsed, basePosition).add(collisionOffset);
+}
+
+function resolveFloatingCardCollisions(elapsed) {
+  if (!cardBodies.length) return;
+  const spineCenter = new THREE.Vector3(0.18, 0, 0.10);
+  const spineRadius = 2.45;
+  const spineYMin = -6.15;
+  const spineYMax = 6.15;
+
+  cardBodies.forEach((body) => {
+    body.collisionVelocity.add(body.collisionOffset.clone().multiplyScalar(-0.024));
+    body.collisionVelocity.multiplyScalar(0.82);
+    body.collisionOffset.add(body.collisionVelocity);
+    if (body.collisionOffset.length() > 2.85) {
+      body.collisionOffset.setLength(2.85);
+    }
+    body.targetPosition.copy(body.basePosition)
+      .add(getCardFloatOffset(body.index, elapsed, body.basePosition))
+      .add(body.collisionOffset);
+  });
+
+  for (let first = 0; first < cardBodies.length; first += 1) {
+    const a = cardBodies[first];
+    for (let second = first + 1; second < cardBodies.length; second += 1) {
+      const b = cardBodies[second];
+      const delta = a.targetPosition.clone().sub(b.targetPosition);
+      delta.y *= 0.82;
+      delta.z *= 0.58;
+      const distance = Math.max(delta.length(), 0.001);
+      const minDistance = a.radius + b.radius;
+      if (distance < minDistance) {
+        const direction = delta.normalize();
+        const strength = (minDistance - distance) * 0.082;
+        a.collisionVelocity.add(direction.clone().multiplyScalar(strength));
+        b.collisionVelocity.add(direction.clone().multiplyScalar(-strength));
+      }
+
+      const screenDelta = new THREE.Vector3(
+        a.targetPosition.x - b.targetPosition.x,
+        (a.targetPosition.y - b.targetPosition.y) * 0.86,
+        0
+      );
+      const screenDistance = Math.max(screenDelta.length(), 0.001);
+      const minScreenDistance = Math.max(a.radius, b.radius) * 1.55;
+      if (screenDistance < minScreenDistance) {
+        const screenDirection = screenDelta.normalize();
+        const screenStrength = (minScreenDistance - screenDistance) * 0.055;
+        const screenCorrection = screenDirection.clone().multiplyScalar((minScreenDistance - screenDistance) * 0.075);
+        a.collisionOffset.add(screenCorrection);
+        b.collisionOffset.add(screenCorrection.clone().multiplyScalar(-1));
+        a.collisionVelocity.add(screenDirection.clone().multiplyScalar(screenStrength));
+        b.collisionVelocity.add(screenDirection.clone().multiplyScalar(-screenStrength));
+      }
+    }
+  }
+
+  cardBodies.forEach((body) => {
+    const position = body.targetPosition;
+    if (position.y < spineYMin - body.radius || position.y > spineYMax + body.radius) return;
+    const flatDelta = new THREE.Vector3(position.x - spineCenter.x, 0, position.z - spineCenter.z);
+    const flatDistance = Math.max(flatDelta.length(), 0.001);
+    const minDistance = spineRadius + body.radius * 0.88;
+    const yPush = position.y > 0 ? 0.035 : -0.035;
+    if (flatDistance < minDistance) {
+      const direction = flatDelta.normalize();
+      const strength = (minDistance - flatDistance) * 0.168;
+      body.collisionVelocity.add(new THREE.Vector3(direction.x, yPush, direction.z).multiplyScalar(strength));
+    }
+
+    const screenDistanceFromSpine = Math.abs(position.x - spineCenter.x);
+    const minScreenSpineDistance = body.radius * 1.45 + 1.40;
+    if (screenDistanceFromSpine < minScreenSpineDistance) {
+      const side = position.x >= spineCenter.x ? 1 : -1;
+      const screenStrength = (minScreenSpineDistance - screenDistanceFromSpine) * 0.150;
+      const screenCorrection = new THREE.Vector3(
+        side * (minScreenSpineDistance - screenDistanceFromSpine) * 0.220,
+        yPush * 0.55,
+        0
+      );
+      body.collisionOffset.add(screenCorrection);
+      body.collisionVelocity.add(new THREE.Vector3(side * screenStrength, yPush * 0.55, 0));
+    }
+  });
+
+  window.__CARD_COLLISION_STATE = cardBodies.map((body) => ({
+    index: body.index,
+    offset: body.collisionOffset.toArray(),
+    velocity: body.collisionVelocity.toArray()
+  }));
+}
+
 function updateFloatingCards(elapsed) {
   if (!floatingCards.length) return;
+  resolveFloatingCardCollisions(elapsed);
   floatingCards.forEach(({ object, index, basePosition, baseQuaternion }) => {
-    object.position.copy(basePosition).add(getCardFloatOffset(index, elapsed, basePosition));
+    object.position.copy(basePosition).add(getCardRouteOffset(index, elapsed, basePosition));
     object.quaternion.copy(baseQuaternion).multiply(
       new THREE.Quaternion().setFromEuler(getCardFloatRotation(index, elapsed))
     );
@@ -890,7 +1005,7 @@ function updateReadableCardText() {
     sprite.material.opacity = THREE.MathUtils.lerp(sprite.material.opacity, targetOpacity, 0.12);
     if (sprite.userData.floatBasePosition) {
       sprite.position.copy(sprite.userData.floatBasePosition).add(
-        getCardFloatOffset(sprite.userData.railIndex ?? 0, shaderClock.value, sprite.userData.floatBasePosition)
+        getCardRouteOffset(sprite.userData.railIndex ?? 0, shaderClock.value, sprite.userData.floatBasePosition)
       );
     }
   });
@@ -974,6 +1089,7 @@ const cardBackTextureCache = new Map();
 const cardTextTextureCache = new Map();
 const cardTextSprites = [];
 const floatingCards = [];
+const cardBodies = [];
 const cardTitles = [
   'SUSTAINABLE\nHORIZONS',
   'E.C.H.O.',
