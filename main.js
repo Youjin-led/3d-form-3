@@ -20,7 +20,7 @@ const RESTORE_SCENE_CARDS = true;
 const USE_SCENE_CARD_SOURCE_MATERIALS = false;
 const USE_BAKED_SCENE_CAMERA = true;
 const MATCH_PUBLISHED_CARD_LAYOUT = true;
-const PUBLISHED_CARD_TARGET_WIDTH = 3.85;
+const PUBLISHED_CARD_TARGET_WIDTH = 1.925;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const REFERENCE_CARD_LAYOUT = [
@@ -2233,6 +2233,7 @@ window.addEventListener('resize', () => {
   composer.setSize(window.innerWidth, window.innerHeight);
   bloomPass.setSize(window.innerWidth, window.innerHeight);
 });
+
 
 
 
