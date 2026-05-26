@@ -22,6 +22,7 @@ const USE_BAKED_SCENE_CAMERA = true;
 const MATCH_PUBLISHED_CARD_LAYOUT = true;
 const PUBLISHED_CARD_TARGET_WIDTH = 3.85;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
+const CARD_MOTION_SPEED = 0.78;
 const REFERENCE_CARD_LAYOUT = [
     {
         "name":  "spiral_project_card_00_edge",
@@ -798,9 +799,10 @@ function applyPublishedCardLayout(model) {
 
 function getCardFloatOffset(index, elapsed, basePosition = new THREE.Vector3()) {
   const phase = index * 0.73;
-  const route = elapsed * (0.72 + (index % 5) * 0.026) + phase;
-  const vertical = elapsed * (0.46 + (index % 4) * 0.021) + phase * 0.62;
-  const pulse = elapsed * (0.86 + (index % 3) * 0.035) + phase * 1.31;
+  const motionTime = elapsed * CARD_MOTION_SPEED;
+  const route = motionTime * (0.72 + (index % 5) * 0.026) + phase;
+  const vertical = motionTime * (0.46 + (index % 4) * 0.021) + phase * 0.62;
+  const pulse = motionTime * (0.86 + (index % 3) * 0.035) + phase * 1.31;
   const lane = index % 2 === 0 ? 1 : -1;
   return new THREE.Vector3(
     Math.sin(route) * 2.95 + Math.sin(route * 0.43 + phase) * 0.76 - basePosition.x * 0.34,
@@ -811,10 +813,11 @@ function getCardFloatOffset(index, elapsed, basePosition = new THREE.Vector3()) 
 
 function getCardFloatRotation(index, elapsed) {
   const phase = index * 0.73;
+  const motionTime = elapsed * CARD_MOTION_SPEED;
   return new THREE.Euler(
-    Math.sin(elapsed * 0.68 + phase) * 0.035,
-    Math.sin(elapsed * 0.60 + phase * 1.4) * 0.050,
-    Math.cos(elapsed * 0.72 + phase * 0.8) * 0.031,
+    Math.sin(motionTime * 0.68 + phase) * 0.035,
+    Math.sin(motionTime * 0.60 + phase * 1.4) * 0.050,
+    Math.cos(motionTime * 0.72 + phase * 0.8) * 0.031,
     'XYZ'
   );
 }
@@ -2230,6 +2233,7 @@ window.addEventListener('resize', () => {
   composer.setSize(window.innerWidth, window.innerHeight);
   bloomPass.setSize(window.innerWidth, window.innerHeight);
 });
+
 
 
 
