@@ -596,6 +596,7 @@ const REFERENCE_CARD_LAYOUT = [
 ];
 
 const scene = new THREE.Scene();
+window.__THREE = THREE;
 window.__THREE_SCENE = scene;
 scene.background = new THREE.Color(0x010607);
 scene.fog = new THREE.FogExp2(0x010607, 0.0058);
@@ -613,6 +614,7 @@ const camera = new THREE.OrthographicCamera(
 camera.position.set(0, 0, 9.4);
 camera.up.set(0, 1, 0);
 camera.lookAt(0, 0, 0);
+window.__THREE_CAMERA = camera;
 
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
@@ -878,17 +880,37 @@ function updateHoveredCardFromPointer() {
   setHoveredCardIndex(null);
 }
 
-function getCardHoverOffset(basePosition, amount) {
-  if (amount <= 0.001) return new THREE.Vector3();
+function getCardFocusPosition(sourcePosition) {
   const cameraDirection = new THREE.Vector3();
-  camera.getWorldDirection(cameraDirection);
-  const towardCamera = cameraDirection.multiplyScalar(-1);
-  const screenCenterPull = new THREE.Vector3(
-    -basePosition.x * 0.24,
-    -basePosition.y * 0.16,
-    0
-  );
-  return towardCamera.multiplyScalar(3.15 * amount).add(screenCenterPull.multiplyScalar(amount));
+  camera.getWorldDirection(cameraDirection).normalize();
+  const depth = sourcePosition.clone().sub(camera.position).dot(cameraDirection);
+  const screenCenter = camera.position.clone().add(cameraDirection.clone().multiplyScalar(depth));
+  return screenCenter.add(cameraDirection.clone().multiplyScalar(-3.35));
+}
+
+function getCardFocusQuaternion() {
+  return camera.getWorldQuaternion(new THREE.Quaternion());
+}
+
+function setObjectDepthTest(object, enabled) {
+  const materials = Array.isArray(object.material) ? object.material : [object.material];
+  materials.forEach((material) => {
+    if (!material) return;
+    if (material.userData.baseDepthTest === undefined) {
+      material.userData.baseDepthTest = material.depthTest;
+    }
+    material.depthTest = enabled;
+    material.needsUpdate = true;
+  });
+}
+
+function restoreObjectDepthTest(object) {
+  const materials = Array.isArray(object.material) ? object.material : [object.material];
+  materials.forEach((material) => {
+    if (!material || material.userData.baseDepthTest === undefined) return;
+    material.depthTest = material.userData.baseDepthTest;
+    material.needsUpdate = true;
+  });
 }
 
 function updateCardHoverTargets() {
@@ -1009,9 +1031,9 @@ function updateFloatingCards(elapsed) {
     );
     const freezePosition = object.userData.hoverFreezePosition;
     if (freezePosition && hoverAmount > 0.001) {
-      const focusPosition = freezePosition.clone().add(getCardHoverOffset(freezePosition, hoverAmount));
+      const focusPosition = getCardFocusPosition(freezePosition);
       object.position.copy(routePosition).lerp(focusPosition, hoverAmount);
-      object.quaternion.copy(routeQuaternion).slerp(object.userData.hoverFreezeQuaternion || routeQuaternion, hoverAmount);
+      object.quaternion.copy(routeQuaternion).slerp(getCardFocusQuaternion(), hoverAmount);
     } else {
       object.position.copy(routePosition);
       object.quaternion.copy(routeQuaternion);
@@ -1021,7 +1043,13 @@ function updateFloatingCards(elapsed) {
       delete object.userData.hoverFreezeQuaternion;
     }
     object.scale.copy(baseScale).multiplyScalar(1 + hoverAmount * 0.48);
-    object.renderOrder = baseRenderOrder + (hoverAmount > 0.02 ? 20 : 0);
+    if (hoverAmount > 0.02) {
+      object.renderOrder = 120 + (object.name.includes('_edge') ? 1 : 2);
+      setObjectDepthTest(object, false);
+    } else {
+      object.renderOrder = baseRenderOrder;
+      restoreObjectDepthTest(object);
+    }
     object.updateMatrix();
   });
 }
@@ -1128,7 +1156,7 @@ function updateReadableCardText() {
       );
       const freezePosition = sprite.userData.hoverFreezePosition;
       if (freezePosition && hoverAmount > 0.001) {
-        const focusPosition = freezePosition.clone().add(getCardHoverOffset(freezePosition, hoverAmount));
+        const focusPosition = getCardFocusPosition(freezePosition);
         sprite.position.copy(routePosition).lerp(focusPosition, hoverAmount);
       } else {
         sprite.position.copy(routePosition);
@@ -1138,6 +1166,7 @@ function updateReadableCardText() {
       }
       if (sprite.userData.floatBaseScale) {
         sprite.scale.copy(sprite.userData.floatBaseScale).multiplyScalar(1 + hoverAmount * 0.12);
+        sprite.renderOrder = hoverAmount > 0.02 ? 130 : 5;
       }
     }
   });
@@ -2201,6 +2230,9 @@ window.addEventListener('resize', () => {
   composer.setSize(window.innerWidth, window.innerHeight);
   bloomPass.setSize(window.innerWidth, window.innerHeight);
 });
+
+
+
 
 
 
