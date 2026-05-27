@@ -802,6 +802,10 @@ function applyPublishedCardLayout(model) {
 
     const match = object.name.match(/^spiral_project_card_(\d+)_(image|edge)$/i);
     if (match) {
+      if (USE_BAKED_GEONODES_JELLYFISH && match[2] === 'edge') {
+        object.visible = false;
+        return;
+      }
       const index = Number(match[1]);
       if (!cardObjectsByIndex.has(index)) cardObjectsByIndex.set(index, []);
       cardObjectsByIndex.get(index).push(object);
@@ -892,24 +896,19 @@ function registerBlenderJellyfishAnimations(model, animations = []) {
 
 function makeBakedJellyfishMaterial(index) {
   const palette = [
-    { color: 0xf5a0ff, emissive: 0xff52d8 },
-    { color: 0xff8cc8, emissive: 0xff3c92 },
-    { color: 0xb7d7ff, emissive: 0x54d8ff },
-    { color: 0xffb18a, emissive: 0xff5868 }
+    { color: 0x7a4d92, emissive: 0x120616 },
+    { color: 0x8a4a70, emissive: 0x160612 },
+    { color: 0x55728f, emissive: 0x061018 },
+    { color: 0x8a6458, emissive: 0x160806 }
   ];
   const tint = palette[index % palette.length];
-  return new THREE.MeshPhysicalMaterial({
+  return new THREE.MeshBasicMaterial({
     color: tint.color,
     transparent: true,
-    opacity: 0.28,
-    roughness: 0.50,
-    metalness: 0,
-    transmission: 0.04,
-    thickness: 0.35,
-    emissive: new THREE.Color(tint.emissive),
-    emissiveIntensity: 0.11,
+    opacity: 0.22,
     side: THREE.DoubleSide,
-    depthWrite: false
+    depthWrite: false,
+    toneMapped: false
   });
 }
 
@@ -959,7 +958,7 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
     box.setFromObject(object);
     box.getSize(size);
     const localHeight = Math.max(size.y, size.x, 0.001);
-    const targetHeight = getResponsiveSettings().portrait ? 4.05 : 3.35;
+    const targetHeight = getResponsiveSettings().portrait ? 3.35 : 2.85;
     const scaleFactor = targetHeight / localHeight;
     object.scale.multiplyScalar(scaleFactor);
     object.updateMatrix();
