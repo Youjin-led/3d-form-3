@@ -209,6 +209,79 @@ canvas {
   opacity: 0;
 }
 
+.jelly-modal {
+  position: fixed;
+  right: 42px;
+  bottom: 42px;
+  z-index: 8;
+  width: min(360px, calc(100vw - 36px));
+  padding: 22px 24px 24px;
+  border: 1px solid rgba(164, 232, 224, 0.46);
+  border-radius: 8px;
+  background: rgba(2, 8, 10, 0.74);
+  box-shadow:
+    0 0 34px rgba(59, 225, 236, 0.18),
+    0 24px 80px rgba(0, 0, 0, 0.44),
+    inset 0 0 24px rgba(147, 91, 255, 0.10);
+  backdrop-filter: blur(12px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(14px) scale(0.98);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.jelly-modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+.jelly-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  color: rgba(236, 252, 255, 0.82);
+  border: 1px solid rgba(154, 221, 222, 0.22);
+  border-radius: 5px;
+  background: rgba(5, 18, 22, 0.62);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.jelly-modal__index,
+.jelly-modal h2,
+.jelly-modal p {
+  letter-spacing: 0;
+  text-shadow:
+    1px 0 rgba(255, 59, 139, 0.55),
+    -1px 0 rgba(26, 215, 255, 0.45),
+    0 0 13px rgba(171, 132, 255, 0.42);
+}
+
+.jelly-modal__index {
+  margin: 0 0 10px;
+  color: rgba(121, 236, 238, 0.72);
+  font-size: 12px;
+}
+
+.jelly-modal h2 {
+  margin: 0 34px 12px 0;
+  color: rgba(246, 242, 255, 0.94);
+  font-size: 20px;
+  line-height: 1.12;
+}
+
+.jelly-modal p:last-child {
+  margin: 0;
+  color: rgba(188, 221, 226, 0.74);
+  font-size: 12px;
+}
+
 @media (max-width: 1180px) {
   canvas {
     filter: saturate(1.34) contrast(1.18) brightness(0.88);
@@ -334,6 +407,18 @@ canvas {
     bottom: calc(max(14px, env(safe-area-inset-bottom)) + 96px);
     max-width: calc(100vw - 32px);
     font-size: 11px;
+  }
+
+  .jelly-modal {
+    right: 14px;
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 12px);
+    left: 14px;
+    width: auto;
+    padding: 18px 18px 20px;
+  }
+
+  .jelly-modal h2 {
+    font-size: 17px;
   }
 }
 

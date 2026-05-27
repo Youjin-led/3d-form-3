@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Spine Orbit Scene</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./styles.css?v=jelly-interaction-smooth-v26" />
+    <link rel="stylesheet" href="./styles.css?v=jelly-click-focus-v27" />
     <script type="importmap">
       {
         "imports": {
@@ -40,7 +40,14 @@
       <button type="button">ASK ME ANYTHING...</button>
     </aside>
 
+    <section class="jelly-modal" id="jelly-modal" aria-hidden="true" aria-label="Selected jellyfish detail">
+      <button type="button" class="jelly-modal__close" id="jelly-modal-close" aria-label="Close">×</button>
+      <p class="jelly-modal__index" id="jelly-modal-index">01</p>
+      <h2 id="jelly-modal-title">SUSTAINABLE HORIZONS</h2>
+      <p id="jelly-modal-copy">ORBIT NODE READY</p>
+    </section>
+
     <div class="load-state" id="load-state">LOADING SCENE</div>
-    <script type="module" src="./main.js?v=jelly-interaction-smooth-v26"></script>
+    <script type="module" src="./main.js?v=jelly-click-focus-v27"></script>
   </body>
 </html>

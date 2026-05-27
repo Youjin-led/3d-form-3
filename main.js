@@ -16,6 +16,11 @@ const loadState = document.querySelector('#load-state');
 const railCount = document.querySelector('#rail-count');
 const railPrev = document.querySelector('#rail-prev');
 const railNext = document.querySelector('#rail-next');
+const jellyModal = document.querySelector('#jelly-modal');
+const jellyModalClose = document.querySelector('#jelly-modal-close');
+const jellyModalIndex = document.querySelector('#jelly-modal-index');
+const jellyModalTitle = document.querySelector('#jelly-modal-title');
+const jellyModalCopy = document.querySelector('#jelly-modal-copy');
 const BAKED_SPINE_VIEW = false;
 const RESTORE_SCENE_CARDS = true;
 const USE_SCENE_CARD_SOURCE_MATERIALS = false;
@@ -27,7 +32,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-interaction-smooth-v26';
+const ASSET_VERSION = 'jelly-click-focus-v27';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -769,6 +774,7 @@ const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 let pointerInsideScene = false;
 let hoveredCardIndex = null;
+let focusedCardIndex = null;
 let pointerNeedsRaycast = false;
 const pointerScreen = { x: 0, y: 0 };
 
@@ -1327,18 +1333,23 @@ function captureHoveredCardPose(index) {
 }
 
 function setHoveredCardIndex(index) {
-  if (index !== null && index !== hoveredCardIndex) {
+  hoveredCardIndex = index;
+  renderer.domElement.style.cursor = index === null ? 'default' : 'pointer';
+  window.__HOVERED_CARD_INDEX = hoveredCardIndex;
+}
+
+function setFocusedCardIndex(index) {
+  if (index !== null && index !== focusedCardIndex) {
     captureHoveredCardPose(index);
   }
-  if (index !== hoveredCardIndex) {
-    markInteraction(index === null ? 420 : 1200);
+  if (index !== focusedCardIndex) {
+    markInteraction(index === null ? 520 : 1400);
   }
-  hoveredCardIndex = index;
+  focusedCardIndex = index;
   cardBodies.forEach((body) => {
     body.hoverTarget = body.index === index ? 1 : 0;
   });
-  renderer.domElement.style.cursor = index === null ? 'default' : 'pointer';
-  window.__HOVERED_CARD_INDEX = hoveredCardIndex;
+  window.__FOCUSED_CARD_INDEX = focusedCardIndex;
 }
 
 function updateHoveredCardFromPointer() {
@@ -1346,6 +1357,13 @@ function updateHoveredCardFromPointer() {
     if (hoveredCardIndex !== null) setHoveredCardIndex(null);
     return;
   }
+  const cardHit = getPointerCardHit();
+  const nextIndex = cardHit === null ? null : cardHit.index;
+  if (nextIndex !== hoveredCardIndex) setHoveredCardIndex(nextIndex);
+}
+
+function getPointerCardHit() {
+  if (!pointerInsideScene || !cardHoverObjects.length) return null;
   raycaster.setFromCamera(pointer, camera);
   const intersections = raycaster.intersectObjects(cardHoverObjects, false);
   const cardHits = intersections.filter((hit) => (
@@ -1366,26 +1384,45 @@ function updateHoveredCardFromPointer() {
       - Math.hypot(bx - pointerScreen.x, by - pointerScreen.y);
   });
   const cardHit = cardHits[0] || null;
-  const nextIndex = cardHit
-    ? Number(cardHit.object.userData.hoverIndex ?? cardHit.object.name.match(/^spiral_project_card_(\d+)_/i)[1])
-    : null;
-  if (nextIndex !== null) {
-    if (nextIndex !== hoveredCardIndex) setHoveredCardIndex(nextIndex);
+  if (!cardHit) return null;
+  return {
+    index: Number(cardHit.object.userData.hoverIndex ?? cardHit.object.name.match(/^spiral_project_card_(\d+)_/i)[1]),
+    object: cardHit.object.userData.hoverSource || cardHit.object,
+  };
+}
+
+function setJellyModalOpen(open, index = focusedCardIndex) {
+  if (!jellyModal) return;
+  if (open && index !== null && index !== undefined) {
+    const title = cardTitles[index % cardTitles.length].replace(/\n/g, ' ');
+    if (jellyModalIndex) jellyModalIndex.textContent = String(index + 1).padStart(2, '0');
+    if (jellyModalTitle) jellyModalTitle.textContent = title;
+    if (jellyModalCopy) jellyModalCopy.textContent = 'ORBIT NODE SELECTED';
+    jellyModal.classList.add('is-open');
+    jellyModal.setAttribute('aria-hidden', 'false');
+    window.__JELLY_MODAL_OPEN = true;
     return;
   }
-  if (hoveredCardIndex !== null) {
-    const hovered = floatingCards.find((card) => card.index === hoveredCardIndex)?.object;
-    if (hovered) {
-      const rect = renderer.domElement.getBoundingClientRect();
-      const projected = hovered.getWorldPosition(new THREE.Vector3()).project(camera);
-      const screenX = (projected.x * 0.5 + 0.5) * rect.width;
-      const screenY = (-projected.y * 0.5 + 0.5) * rect.height;
-      const distance = Math.hypot(screenX - pointerScreen.x, screenY - pointerScreen.y);
-      const hoverHoldRadius = hovered.userData.isBakedGeonodesJellyfish ? 920 : 330;
-      if (distance < hoverHoldRadius) return;
-    }
+  jellyModal.classList.remove('is-open');
+  jellyModal.setAttribute('aria-hidden', 'true');
+  window.__JELLY_MODAL_OPEN = false;
+}
+
+function handleSceneClick(event) {
+  updatePointerFromEvent(event);
+  const hit = getPointerCardHit();
+  if (!hit) {
+    setFocusedCardIndex(null);
+    setJellyModalOpen(false);
+    return;
   }
-  setHoveredCardIndex(null);
+  if (focusedCardIndex === hit.index) {
+    setJellyModalOpen(true, hit.index);
+    markInteraction(700);
+    return;
+  }
+  setJellyModalOpen(false);
+  setFocusedCardIndex(hit.index);
 }
 
 function getCardFocusPosition(sourcePosition) {
@@ -1784,10 +1821,22 @@ function clearHoveredCard() {
 
 railPrev?.addEventListener('click', () => moveRail(-1));
 railNext?.addEventListener('click', () => moveRail(1));
+jellyModalClose?.addEventListener('click', () => setJellyModalOpen(false));
+jellyModal?.addEventListener('click', (event) => {
+  if (event.target === jellyModal) setJellyModalOpen(false);
+});
 
 renderer.domElement.addEventListener('pointermove', updatePointerFromEvent, { passive: true });
 renderer.domElement.addEventListener('pointerleave', clearHoveredCard, { passive: true });
 renderer.domElement.addEventListener('pointercancel', clearHoveredCard, { passive: true });
+renderer.domElement.addEventListener('click', handleSceneClick, { passive: true });
+
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    setJellyModalOpen(false);
+    setFocusedCardIndex(null);
+  }
+});
 
 window.addEventListener('wheel', (event) => {
   if (!cardRail.ready || Math.abs(event.deltaY) < 12) {
@@ -2841,7 +2890,7 @@ let animationFrameIndex = 0;
 
 function updateSceneAnimationMixers(delta) {
   animationFrameIndex += 1;
-  const activeHoverIndex = hoveredCardIndex;
+  const activeHoverIndex = focusedCardIndex ?? hoveredCardIndex;
   const interactionActive = renderQualityState.interactionActive;
   sceneAnimationMixers.forEach((mixer) => {
     const data = mixer.userData || {};
