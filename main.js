@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-hover-face-camera-v6';
+const ASSET_VERSION = 'jelly-hover-fast-approach-v7';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1260,8 +1260,9 @@ function restoreObjectDepthTest(object) {
 
 function updateCardHoverTargets() {
   cardBodies.forEach((body) => {
-    body.hoverAmount = THREE.MathUtils.lerp(body.hoverAmount, body.hoverTarget, 0.24);
-    if (body.hoverTarget === 1 && body.hoverAmount > 0.86) {
+    const approachEase = USE_BAKED_GEONODES_JELLYFISH ? 0.42 : 0.24;
+    body.hoverAmount = THREE.MathUtils.lerp(body.hoverAmount, body.hoverTarget, approachEase);
+    if (body.hoverTarget === 1 && body.hoverAmount > 0.93) {
       body.hoverAmount = 1;
     }
     if (body.hoverTarget === 0 && body.hoverAmount < 0.018) {
