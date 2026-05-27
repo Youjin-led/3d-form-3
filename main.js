@@ -26,6 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
+const ASSET_VERSION = 'c5280f6-jelly-motion';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -2400,7 +2401,7 @@ async function loadBlenderMaterialOverrides() {
 function loadBakedGeonodesJellyfishAsset() {
   return new Promise((resolve, reject) => {
     loader.load(
-      './assets/baked_geonodes_jellyfish.glb',
+      `./assets/baked_geonodes_jellyfish.glb?v=${ASSET_VERSION}`,
       resolve,
       undefined,
       reject
@@ -2409,7 +2410,7 @@ function loadBakedGeonodesJellyfishAsset() {
 }
 
 loadBlenderMaterialOverrides().then((materialOverrides) => loader.load(
-  './assets/scene.glb',
+  `./assets/scene.glb?v=${ASSET_VERSION}`,
   async (gltf) => {
     const model = gltf.scene;
     window.__THREE_MODEL = model;
