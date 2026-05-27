@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-glass-chrome-dim-v13';
+const ASSET_VERSION = 'jelly-opaque-smoked-chrome-v20';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -897,33 +897,35 @@ function registerBlenderJellyfishAnimations(model, animations = []) {
 
 function makeBakedJellyfishMaterial(index) {
   const palette = [
-    { color: 0xb7f4ff, emissive: 0x0ed8ff },
-    { color: 0xd7c6ff, emissive: 0x7b42ff },
-    { color: 0xf4d8ff, emissive: 0xff4bd8 },
-    { color: 0xc4fff1, emissive: 0x00f5c8 }
+    { color: 0x13272d, emissive: 0x000000 },
+    { color: 0x201b33, emissive: 0x000000 },
+    { color: 0x2a1c29, emissive: 0x000000 },
+    { color: 0x162b28, emissive: 0x000000 }
   ];
   const tint = palette[index % palette.length];
   const material = new THREE.MeshPhysicalMaterial({
     color: tint.color,
     emissive: tint.emissive,
-    emissiveIntensity: 0.035,
-    metalness: 0.66,
-    roughness: 0.24,
-    clearcoat: 1,
-    clearcoatRoughness: 0.16,
-    transparent: true,
-    opacity: 0.22,
+    emissiveIntensity: 0,
+    metalness: 0.36,
+    roughness: 0.54,
+    clearcoat: 0,
+    clearcoatRoughness: 0.72,
+    transparent: false,
+    opacity: 1,
     side: THREE.DoubleSide,
-    depthWrite: false,
+    depthWrite: true,
     depthTest: true,
     blending: THREE.NormalBlending,
-    toneMapped: false
+    toneMapped: true
   });
   material.ior = 1.42;
-  material.reflectivity = 0.46;
-  material.iridescence = 0.42;
+  material.reflectivity = 0.12;
+  material.iridescence = 0.12;
   material.iridescenceIOR = 1.34;
   material.iridescenceThicknessRange = [120, 520];
+  material.envMapIntensity = 0.04;
+  material.specularIntensity = 0;
   material.userData.baseDepthTest = material.depthTest;
   return material;
 }
@@ -953,6 +955,11 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
 
   model.traverse((object) => {
     const match = object.name.match(/^spiral_project_card_(\d+)_image$/i);
+    if (USE_JELLYFISH_CARD_MODE && /^spiral_project_card_\d+_edge$/i.test(object.name)) {
+      object.visible = false;
+      object.userData.disabledJellyfishCardEdge = true;
+      return;
+    }
     if (!object.isMesh || !match) return;
     const index = Number(match[1]);
     object.geometry = sourceGeometry;
