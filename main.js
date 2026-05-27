@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-opaque-smoked-chrome-v20';
+const ASSET_VERSION = 'jelly-hover-wide-hit-v23';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -989,6 +989,26 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
     object.updateMatrix();
     object.updateMatrixWorld(true);
 
+    const hitProxy = new THREE.Mesh(
+      new THREE.SphereGeometry(1, 18, 12),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false,
+        depthTest: false
+      })
+    );
+    hitProxy.name = `${object.name}_hover_proxy`;
+    hitProxy.userData.hoverIndex = index;
+    hitProxy.userData.hoverSource = object;
+    hitProxy.frustumCulled = false;
+    hitProxy.position.copy(object.position);
+    hitProxy.scale.setScalar(Math.max(object.userData.baseVisualHeight * 0.62, 2.25));
+    scene.add(hitProxy);
+    object.userData.hoverProxy = hitProxy;
+    cardHoverObjects.push(hitProxy);
+
     const mixer = new THREE.AnimationMixer(object);
     sceneAnimationMixers.push(mixer);
     const actions = clips.map((clip, clipIndex) => {
@@ -1014,7 +1034,8 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
   window.__BAKED_GEONODES_JELLYFISH = {
     replaced,
     clips: clips.map((clip) => clip.name),
-    sourceVertices: sourceGeometry.attributes.position?.count || 0
+    sourceVertices: sourceGeometry.attributes.position?.count || 0,
+    hoverProxies: cardHoverObjects.filter((object) => object.userData.hoverIndex !== undefined).length
   };
 }
 
@@ -1203,8 +1224,27 @@ function updateHoveredCardFromPointer() {
   }
   raycaster.setFromCamera(pointer, camera);
   const intersections = raycaster.intersectObjects(cardHoverObjects, false);
-  const cardHit = intersections.find((hit) => /^spiral_project_card_(\d+)_(image|edge)$/i.test(hit.object.name));
-  const nextIndex = cardHit ? Number(cardHit.object.name.match(/^spiral_project_card_(\d+)_/i)[1]) : null;
+  const cardHits = intersections.filter((hit) => (
+    hit.object.userData.hoverIndex !== undefined
+    || /^spiral_project_card_(\d+)_(image|edge)$/i.test(hit.object.name)
+  ));
+  const rect = renderer.domElement.getBoundingClientRect();
+  cardHits.sort((a, b) => {
+    const sourceA = a.object.userData.hoverSource || a.object;
+    const sourceB = b.object.userData.hoverSource || b.object;
+    const projectedA = sourceA.getWorldPosition(new THREE.Vector3()).project(camera);
+    const projectedB = sourceB.getWorldPosition(new THREE.Vector3()).project(camera);
+    const ax = (projectedA.x * 0.5 + 0.5) * rect.width;
+    const ay = (-projectedA.y * 0.5 + 0.5) * rect.height;
+    const bx = (projectedB.x * 0.5 + 0.5) * rect.width;
+    const by = (-projectedB.y * 0.5 + 0.5) * rect.height;
+    return Math.hypot(ax - pointerScreen.x, ay - pointerScreen.y)
+      - Math.hypot(bx - pointerScreen.x, by - pointerScreen.y);
+  });
+  const cardHit = cardHits[0] || null;
+  const nextIndex = cardHit
+    ? Number(cardHit.object.userData.hoverIndex ?? cardHit.object.name.match(/^spiral_project_card_(\d+)_/i)[1])
+    : null;
   if (nextIndex !== null) {
     if (nextIndex !== hoveredCardIndex) setHoveredCardIndex(nextIndex);
     return;
@@ -1429,6 +1469,11 @@ function updateFloatingCards(elapsed) {
     }
     object.scale.copy(baseScale);
     object.scale.multiplyScalar(1 + hoverAmount * getJellyfishHoverScaleBoost(object, baseScale));
+    if (object.userData.hoverProxy) {
+      const hitRadius = Math.max((object.userData.baseVisualHeight || 3.2) * 0.62, 2.25);
+      object.userData.hoverProxy.position.copy(object.position);
+      object.userData.hoverProxy.scale.setScalar(hitRadius * (1 + hoverAmount * 0.38));
+    }
     updateJellyfishAnimationForHeight(object, index);
     if (hoverAmount > 0.02) {
       object.renderOrder = 120 + (object.name.includes('_edge') ? 1 : 2);
