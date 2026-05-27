@@ -27,7 +27,68 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-draco-scene-v24';
+const ASSET_VERSION = 'jelly-mobile-optimized-v25';
+
+function getDeviceProfile() {
+  const width = window.innerWidth || 1440;
+  const height = window.innerHeight || 900;
+  const minSide = Math.min(width, height);
+  const maxSide = Math.max(width, height);
+  const coarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false;
+  const mobile = coarsePointer && minSide <= 520;
+  const tablet = coarsePointer && !mobile && maxSide <= 1180;
+  if (mobile) {
+    return {
+      name: 'mobile',
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.12),
+      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 0.96),
+      bloomStrength: 0.064,
+      bloomRadius: 0.18,
+      bloomThreshold: 0.91,
+      filmIntensity: 0.11,
+      particleScale: 0.54,
+      particleOpacity: 0.82,
+      textureScale: 0.78,
+    };
+  }
+  if (tablet) {
+    return {
+      name: 'tablet',
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.28),
+      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.16),
+      bloomStrength: 0.074,
+      bloomRadius: 0.21,
+      bloomThreshold: 0.90,
+      filmIntensity: 0.15,
+      particleScale: 0.70,
+      particleOpacity: 0.90,
+      textureScale: 0.88,
+    };
+  }
+  return {
+    name: 'desktop',
+    pixelRatio: Math.min(window.devicePixelRatio || 1, 1.75),
+    composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.75),
+    bloomStrength: 0.09,
+    bloomRadius: 0.24,
+    bloomThreshold: 0.88,
+    filmIntensity: 0.22,
+    particleScale: 1,
+    particleOpacity: 1,
+    textureScale: 1,
+  };
+}
+
+function publishQualityProfile() {
+  const profile = getDeviceProfile();
+  window.__QUALITY_PROFILE = {
+    name: profile.name,
+    pixelRatio: profile.pixelRatio,
+    composerPixelRatio: profile.composerPixelRatio,
+    particleScale: profile.particleScale,
+  };
+  return profile;
+}
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -663,6 +724,7 @@ scene.background = new THREE.Color(0x010607);
 scene.fog = new THREE.FogExp2(0x010607, 0.0058);
 
 publishResponsiveView();
+let qualityProfile = publishQualityProfile();
 let viewHeight = getResponsiveSettings().viewHeight;
 let viewWidth = getViewWidth(viewHeight);
 const camera = new THREE.OrthographicCamera(
@@ -679,11 +741,11 @@ camera.lookAt(0, 0, 0);
 window.__THREE_CAMERA = camera;
 
 const renderer = new THREE.WebGLRenderer({
-  antialias: true,
+  antialias: qualityProfile.name === 'desktop',
   alpha: false,
   powerPreference: 'high-performance'
 });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+renderer.setPixelRatio(qualityProfile.pixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -699,14 +761,19 @@ let pointerNeedsRaycast = false;
 const pointerScreen = { x: 0, y: 0 };
 
 const composer = new EffectComposer(renderer);
-composer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+composer.setPixelRatio(qualityProfile.composerPixelRatio);
 composer.setSize(window.innerWidth, window.innerHeight);
 composer.addPass(new RenderPass(scene, camera));
 
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.09, 0.24, 0.88);
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight),
+  qualityProfile.bloomStrength,
+  qualityProfile.bloomRadius,
+  qualityProfile.bloomThreshold
+);
 composer.addPass(bloomPass);
 
-const filmPass = new FilmPass(0.22, false);
+const filmPass = new FilmPass(qualityProfile.filmIntensity, false);
 composer.addPass(filmPass);
 composer.addPass(new OutputPass());
 
@@ -1799,15 +1866,17 @@ function makeDustTexture() {
 
 function makeNebulaTexture(seedColorA, seedColorB) {
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
+  const textureSize = Math.round(512 * qualityProfile.textureScale);
+  const scale = textureSize / 512;
+  canvas.width = textureSize;
+  canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, 512, 512);
+  ctx.clearRect(0, 0, textureSize, textureSize);
   ctx.globalCompositeOperation = 'screen';
-  for (let i = 0; i < 46; i++) {
-    const x = 150 + Math.random() * 260;
-    const y = 80 + Math.random() * 360;
-    const r = 55 + Math.random() * 150;
+  for (let i = 0; i < Math.round(46 * qualityProfile.particleScale); i++) {
+    const x = (150 + Math.random() * 260) * scale;
+    const y = (80 + Math.random() * 360) * scale;
+    const r = (55 + Math.random() * 150) * scale;
     const color = Math.random() > 0.5 ? seedColorA : seedColorB;
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, color.replace('ALPHA', String(0.035 + Math.random() * 0.05)));
@@ -1822,18 +1891,20 @@ function makeNebulaTexture(seedColorA, seedColorB) {
 
 function makeParticleClusterTexture(seedColorA, seedColorB, seedColorC) {
   const canvas = document.createElement('canvas');
-  canvas.width = 640;
-  canvas.height = 640;
+  const textureSize = Math.round(640 * qualityProfile.textureScale);
+  const scale = textureSize / 640;
+  canvas.width = textureSize;
+  canvas.height = textureSize;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.globalCompositeOperation = 'screen';
 
-  for (let i = 0; i < 240; i++) {
+  for (let i = 0; i < Math.round(240 * qualityProfile.particleScale); i++) {
     const angle = Math.random() * Math.PI * 2;
-    const radius = Math.pow(Math.random(), 1.9) * 270;
-    const x = 320 + Math.cos(angle) * radius * (0.68 + Math.random() * 0.46);
-    const y = 320 + Math.sin(angle) * radius * (0.42 + Math.random() * 0.64);
-    const dot = 1.2 + Math.random() * 4.2;
+    const radius = Math.pow(Math.random(), 1.9) * 270 * scale;
+    const x = textureSize * 0.5 + Math.cos(angle) * radius * (0.68 + Math.random() * 0.46);
+    const y = textureSize * 0.5 + Math.sin(angle) * radius * (0.42 + Math.random() * 0.64);
+    const dot = (1.2 + Math.random() * 4.2) * scale;
     const color = i % 3 === 0 ? seedColorA : i % 3 === 1 ? seedColorB : seedColorC;
     ctx.fillStyle = color.replace('ALPHA', String(0.16 + Math.random() * 0.42));
     ctx.beginPath();
@@ -1841,10 +1912,10 @@ function makeParticleClusterTexture(seedColorA, seedColorB, seedColorC) {
     ctx.fill();
   }
 
-  for (let i = 0; i < 12; i++) {
-    const x = 190 + Math.random() * 260;
-    const y = 140 + Math.random() * 360;
-    const r = 80 + Math.random() * 140;
+  for (let i = 0; i < Math.round(12 * qualityProfile.particleScale); i++) {
+    const x = (190 + Math.random() * 260) * scale;
+    const y = (140 + Math.random() * 360) * scale;
+    const r = (80 + Math.random() * 140) * scale;
     const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
     glow.addColorStop(0, seedColorA.replace('ALPHA', '0.08'));
     glow.addColorStop(1, seedColorB.replace('ALPHA', '0'));
@@ -1860,6 +1931,8 @@ function makeParticleClusterTexture(seedColorA, seedColorB, seedColorC) {
 function addStarField() {
   const glow = makeGlowTexture();
   const dust = makeDustTexture();
+  const particleCount = (count) => Math.max(8, Math.round(count * qualityProfile.particleScale));
+  const particleOpacity = (opacity) => opacity * qualityProfile.particleOpacity;
 
   function pointsLayer(count, radiusMin, radiusMax, size, opacity) {
     const positions = [];
@@ -1903,7 +1976,7 @@ function addStarField() {
     return points;
   }
 
-  pointsLayer(24, 13.0, 24.0, 1.0, 0.035);
+  pointsLayer(particleCount(24), 13.0, 24.0, 1.0, particleOpacity(0.035));
 
   function centralDust(count, height, radius, turns, size, opacity, yOffset = 0) {
     const positions = [];
@@ -2034,21 +2107,21 @@ function addStarField() {
     new THREE.Color(0xff5fc4)
   ];
 
-  centralDust(2100, 17.6, 2.55, 3.55, 5.7, 0.46);
-  centralDust(900, 18.8, 4.15, 2.2, 3.7, 0.26, 0.25);
-  dustCloud(900, [-2.9, 3.6, 1.4], [2.0, 4.8, 1.5], 6.2, 0.50, violetTeal, [0.16, 0, 0]);
-  dustCloud(760, [2.55, 2.9, -1.2], [2.4, 5.4, 1.7], 5.4, 0.46, violetTeal, [-0.12, 0, 0]);
-  dustCloud(760, [-2.6, -3.1, 1.9], [2.2, 4.0, 1.6], 5.0, 0.40, deepGreen, [0.20, 0, 0]);
-  dustCloud(700, [3.1, -2.7, 1.6], [2.1, 3.8, 1.5], 5.5, 0.42, deepGreen, [-0.18, 0, 0]);
-  dustCloud(880, [0.4, 6.25, 2.4], [5.2, 1.8, 1.8], 4.4, 0.48, violetTeal);
-  dustCloud(680, [-1.0, 1.2, 4.6], [5.8, 8.4, 0.7], 2.9, 0.22, violetTeal, [0.05, 0, 0], true);
-  dustCloud(520, [3.1, -0.8, 4.2], [3.4, 6.4, 0.6], 3.2, 0.25, deepGreen, [-0.10, 0, 0], true);
-  dustCloud(760, [4.9, 5.2, 0.8], [3.8, 3.2, 1.2], 4.8, 0.54, violetTeal, [-0.22, 0, 0]);
-  dustCloud(560, [-4.6, 5.7, 1.8], [3.0, 2.8, 1.1], 4.2, 0.42, violetTeal, [0.16, 0, 0]);
-  dustCloud(520, [5.2, -0.1, 2.8], [2.2, 5.2, 0.9], 4.1, 0.36, deepGreen, [-0.12, 0, 0], true);
-  verticalStream(720, -3.8, 1.0, -5.7, 6.6, 0.72, 3.9, 0.44, violetTeal);
-  verticalStream(640, 3.8, -1.4, -5.4, 6.2, 0.68, 3.7, 0.40, deepGreen);
-  verticalStream(420, 0.25, 4.4, -4.4, 5.6, 1.2, 2.6, 0.18, violetTeal, true);
+  centralDust(particleCount(2100), 17.6, 2.55, 3.55, 5.7, particleOpacity(0.46));
+  centralDust(particleCount(900), 18.8, 4.15, 2.2, 3.7, particleOpacity(0.26), 0.25);
+  dustCloud(particleCount(900), [-2.9, 3.6, 1.4], [2.0, 4.8, 1.5], 6.2, particleOpacity(0.50), violetTeal, [0.16, 0, 0]);
+  dustCloud(particleCount(760), [2.55, 2.9, -1.2], [2.4, 5.4, 1.7], 5.4, particleOpacity(0.46), violetTeal, [-0.12, 0, 0]);
+  dustCloud(particleCount(760), [-2.6, -3.1, 1.9], [2.2, 4.0, 1.6], 5.0, particleOpacity(0.40), deepGreen, [0.20, 0, 0]);
+  dustCloud(particleCount(700), [3.1, -2.7, 1.6], [2.1, 3.8, 1.5], 5.5, particleOpacity(0.42), deepGreen, [-0.18, 0, 0]);
+  dustCloud(particleCount(880), [0.4, 6.25, 2.4], [5.2, 1.8, 1.8], 4.4, particleOpacity(0.48), violetTeal);
+  dustCloud(particleCount(680), [-1.0, 1.2, 4.6], [5.8, 8.4, 0.7], 2.9, particleOpacity(0.22), violetTeal, [0.05, 0, 0], true);
+  dustCloud(particleCount(520), [3.1, -0.8, 4.2], [3.4, 6.4, 0.6], 3.2, particleOpacity(0.25), deepGreen, [-0.10, 0, 0], true);
+  dustCloud(particleCount(760), [4.9, 5.2, 0.8], [3.8, 3.2, 1.2], 4.8, particleOpacity(0.54), violetTeal, [-0.22, 0, 0]);
+  dustCloud(particleCount(560), [-4.6, 5.7, 1.8], [3.0, 2.8, 1.1], 4.2, particleOpacity(0.42), violetTeal, [0.16, 0, 0]);
+  dustCloud(particleCount(520), [5.2, -0.1, 2.8], [2.2, 5.2, 0.9], 4.1, particleOpacity(0.36), deepGreen, [-0.12, 0, 0], true);
+  verticalStream(particleCount(720), -3.8, 1.0, -5.7, 6.6, 0.72, 3.9, particleOpacity(0.44), violetTeal);
+  verticalStream(particleCount(640), 3.8, -1.4, -5.4, 6.2, 0.68, 3.7, particleOpacity(0.40), deepGreen);
+  verticalStream(particleCount(420), 0.25, 4.4, -4.4, 5.6, 1.2, 2.6, particleOpacity(0.18), violetTeal, true);
 
   const clusterTexA = makeParticleClusterTexture('rgba(40,230,255,ALPHA)', 'rgba(206,68,255,ALPHA)', 'rgba(50,255,168,ALPHA)');
   const clusterTexB = makeParticleClusterTexture('rgba(50,255,156,ALPHA)', 'rgba(54,96,255,ALPHA)', 'rgba(255,150,78,ALPHA)');
@@ -2737,6 +2810,7 @@ animate();
 window.addEventListener('resize', () => {
   const settings = getResponsiveSettings();
   publishResponsiveView();
+  qualityProfile = publishQualityProfile();
   viewHeight = settings.viewHeight;
   viewWidth = getViewWidth(viewHeight);
   camera.left = viewWidth / -2;
@@ -2757,10 +2831,14 @@ window.addEventListener('resize', () => {
     }
   }
   camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+  renderer.setPixelRatio(qualityProfile.pixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
+  composer.setPixelRatio(qualityProfile.composerPixelRatio);
   composer.setSize(window.innerWidth, window.innerHeight);
+  bloomPass.strength = qualityProfile.bloomStrength;
+  bloomPass.radius = qualityProfile.bloomRadius;
+  bloomPass.threshold = qualityProfile.bloomThreshold;
+  filmPass.uniforms.intensity.value = qualityProfile.filmIntensity;
   bloomPass.setSize(window.innerWidth, window.innerHeight);
 });
 

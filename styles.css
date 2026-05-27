@@ -21,6 +21,7 @@ body,
 }
 
 body {
+  touch-action: pan-y;
   background:
     radial-gradient(circle at 10% 88%, rgba(82, 50, 180, 0.24), transparent 30%),
     radial-gradient(circle at 88% 6%, rgba(157, 225, 165, 0.16), transparent 22%),
@@ -213,6 +214,11 @@ canvas {
     filter: saturate(1.34) contrast(1.18) brightness(0.88);
   }
 
+  .top-nav,
+  .rail-control {
+    backdrop-filter: blur(7px);
+  }
+
   .top-nav {
     top: max(22px, env(safe-area-inset-top));
     right: 24px;
@@ -233,6 +239,10 @@ canvas {
 }
 
 @media (max-width: 760px) {
+  canvas {
+    filter: saturate(1.24) contrast(1.12) brightness(0.9);
+  }
+
   body::before {
     width: 100vw;
     height: 38vh;
@@ -243,7 +253,11 @@ canvas {
 
   .blender-grade {
     opacity: 0.06;
-    filter: blur(10px) saturate(1.52) contrast(1.12);
+    background:
+      radial-gradient(circle at 50% 40%, rgba(255, 55, 210, 0.14), transparent 24%),
+      radial-gradient(circle at 62% 72%, rgba(34, 245, 128, 0.12), transparent 22%),
+      linear-gradient(90deg, rgba(18, 8, 44, 0.30), transparent 36%, rgba(0, 40, 36, 0.24));
+    filter: blur(8px) saturate(1.32) contrast(1.08);
   }
 
   .top-nav {
@@ -265,8 +279,10 @@ canvas {
   .rail-control {
     top: calc(max(14px, env(safe-area-inset-top)) + 54px);
     right: 14px;
+    left: auto;
     grid-template-columns: 34px minmax(76px, 104px) 34px;
     height: 36px;
+    background: rgba(3, 9, 12, 0.38);
   }
 
   .rail-control button {
@@ -287,6 +303,7 @@ canvas {
     gap: 8px 14px;
     min-width: 0;
     padding: 10px 0 0;
+    pointer-events: none;
   }
 
   .side-menu p {
@@ -300,6 +317,7 @@ canvas {
     font-size: 11px;
     line-height: 1.15;
     white-space: nowrap;
+    pointer-events: auto;
   }
 
   .side-menu button {
@@ -309,6 +327,7 @@ canvas {
     margin-top: 2px;
     font-size: 11px;
     border-radius: 19px;
+    pointer-events: auto;
   }
 
   .load-state {
@@ -347,6 +366,15 @@ canvas {
 }
 
 @media (max-width: 420px) {
+  .top-nav {
+    height: 38px;
+    padding: 0 14px;
+  }
+
+  .rail-control {
+    top: calc(max(14px, env(safe-area-inset-top)) + 48px);
+  }
+
   .side-menu a:nth-of-type(4),
   .side-menu a:nth-of-type(5) {
     display: none;
