@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-smooth-helix-v4';
+const ASSET_VERSION = 'jelly-hover-approach-v5';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -959,9 +959,11 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
     box.setFromObject(object);
     box.getSize(size);
     const localHeight = Math.max(size.y, size.x, 0.001);
-    const targetHeight = getResponsiveSettings().portrait ? 3.35 : 2.85;
+    const targetHeight = (getResponsiveSettings().portrait ? 3.35 : 2.85) * 2;
     const scaleFactor = targetHeight / localHeight;
     object.scale.multiplyScalar(scaleFactor);
+    object.userData.baseVisualHeight = targetHeight;
+    object.userData.jellyfishHoodHeightRatio = 0.52;
     object.updateMatrix();
     object.updateMatrixWorld(true);
 
@@ -1204,11 +1206,26 @@ function getCardFocusPosition(sourcePosition) {
   camera.getWorldDirection(cameraDirection).normalize();
   const depth = sourcePosition.clone().sub(camera.position).dot(cameraDirection);
   const screenCenter = camera.position.clone().add(cameraDirection.clone().multiplyScalar(depth));
-  return screenCenter.add(cameraDirection.clone().multiplyScalar(-getResponsiveSettings().focusPull));
+  const approachPull = USE_BAKED_GEONODES_JELLYFISH ? getResponsiveSettings().focusPull * 1.55 : getResponsiveSettings().focusPull;
+  return screenCenter.add(cameraDirection.clone().multiplyScalar(-approachPull));
 }
 
 function getCardFocusQuaternion() {
   return camera.getWorldQuaternion(new THREE.Quaternion());
+}
+
+function getJellyfishHoverScaleBoost(object, baseScale) {
+  if (!USE_BAKED_GEONODES_JELLYFISH || !object.userData.isBakedGeonodesJellyfish) {
+    return getResponsiveSettings().focusScaleBoost;
+  }
+  const baseHeight = object.userData.baseVisualHeight || 1;
+  const screenWorldHeight = viewHeight / Math.max(camera.zoom, 0.001);
+  const targetHoodHeight = screenWorldHeight * 0.25;
+  const hoodRatio = object.userData.jellyfishHoodHeightRatio || 0.52;
+  const currentHoodHeight = Math.max(baseHeight * hoodRatio, 0.001);
+  const targetMultiplier = THREE.MathUtils.clamp(targetHoodHeight / currentHoodHeight, 1.02, 1.28);
+  const baseMultiplier = baseScale.x ? object.scale.x / baseScale.x : 1;
+  return Math.max(0, targetMultiplier - baseMultiplier);
 }
 
 function setObjectDepthTest(object, enabled) {
@@ -1376,7 +1393,7 @@ function updateFloatingCards(elapsed) {
       delete object.userData.hoverFreezeQuaternion;
     }
     object.scale.copy(baseScale);
-    object.scale.multiplyScalar(1 + hoverAmount * getResponsiveSettings().focusScaleBoost);
+    object.scale.multiplyScalar(1 + hoverAmount * getJellyfishHoverScaleBoost(object, baseScale));
     updateJellyfishAnimationForHeight(object, index);
     if (hoverAmount > 0.02) {
       object.renderOrder = 120 + (object.name.includes('_edge') ? 1 : 2);
