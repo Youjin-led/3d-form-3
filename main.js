@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-long-stream-v3';
+const ASSET_VERSION = 'jelly-spiral-route-v1';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1014,16 +1014,32 @@ function updateJellyfishAnimationForHeight(object, index) {
 }
 
 function getCardFloatOffset(index, elapsed, basePosition = new THREE.Vector3()) {
-  const phase = index * 0.73;
+  const target = getJellyfishSpiralTargetPosition(index, elapsed, basePosition);
+  return target.sub(basePosition);
+}
+
+function getJellyfishSpiralTargetPosition(index, elapsed, basePosition = new THREE.Vector3()) {
+  const spineCenter = new THREE.Vector3(0.18, 0, 0.10);
+  const baseRadial = new THREE.Vector3(basePosition.x - spineCenter.x, 0, basePosition.z - spineCenter.z);
+  if (baseRadial.lengthSq() < 0.01) {
+    baseRadial.set(index % 2 === 0 ? 1 : -1, 0, 0.35);
+  }
+  const baseAngle = Math.atan2(baseRadial.z, baseRadial.x);
+  const baseRadius = THREE.MathUtils.clamp(baseRadial.length(), 3.35, 5.15);
+  const phase = index * 1.618;
   const motionTime = elapsed * CARD_MOTION_SPEED;
-  const route = motionTime * (0.72 + (index % 5) * 0.026) + phase;
-  const vertical = motionTime * (0.46 + (index % 4) * 0.021) + phase * 0.62;
-  const pulse = motionTime * (0.86 + (index % 3) * 0.035) + phase * 1.31;
-  const lane = index % 2 === 0 ? 1 : -1;
+  const direction = index % 2 === 0 ? 1 : -1;
+  const orbitSpeed = 0.22 + (index % 5) * 0.018;
+  const riseSpeed = 0.16 + (index % 4) * 0.015;
+  const climb = motionTime * riseSpeed * direction + phase;
+  const angle = baseAngle + direction * motionTime * orbitSpeed + Math.sin(climb * 0.74) * 0.16;
+  const radius = baseRadius + Math.sin(motionTime * 0.31 + phase) * 0.22 + ((index % 3) - 1) * 0.10;
+  const vertical = Math.sin(climb) * 5.05 + Math.sin(climb * 0.48 + phase * 0.7) * 0.56;
+  const waterWobble = Math.sin(motionTime * 0.62 + phase) * 0.085;
   return new THREE.Vector3(
-    Math.sin(route) * 2.95 + Math.sin(route * 0.43 + phase) * 0.76 - basePosition.x * 0.34,
-    Math.sin(vertical) * 4.05 + Math.cos(pulse * 0.82) * 0.30 - basePosition.y * 0.58,
-    Math.cos(route * 0.86 + lane * 0.38) * 2.44 + Math.sin(vertical * 0.58 + phase) * 0.68 - basePosition.z * 0.28
+    spineCenter.x + Math.cos(angle) * radius,
+    vertical,
+    spineCenter.z + Math.sin(angle) * radius + waterWobble
   );
 }
 
@@ -1092,6 +1108,22 @@ function keepJellyfishAwayFromUi(position) {
       position.y = Math.max(position.y, -1.2);
     }
   }
+  return position;
+}
+
+function keepJellyfishOrbitDistance(position) {
+  if (!USE_BAKED_GEONODES_JELLYFISH || !USE_JELLYFISH_CARD_MODE) return position;
+  const spineCenter = new THREE.Vector3(0.18, 0, 0.10);
+  const radial = new THREE.Vector3(position.x - spineCenter.x, 0, position.z - spineCenter.z);
+  const distance = radial.length();
+  if (distance < 0.01) {
+    radial.set(1, 0, 0);
+  } else {
+    radial.normalize();
+  }
+  const targetDistance = THREE.MathUtils.clamp(distance, 3.35, 5.75);
+  position.x = spineCenter.x + radial.x * targetDistance;
+  position.z = spineCenter.z + radial.z * targetDistance;
   return position;
 }
 
@@ -1293,6 +1325,7 @@ function updateFloatingCards(elapsed) {
     const hoverAmount = body ? body.hoverAmount : 0;
     let routePosition = basePosition.clone().add(getCardRouteOffset(index, elapsed, basePosition));
     keepJellyfishAwayFromUi(routePosition);
+    keepJellyfishOrbitDistance(routePosition);
     const routeQuaternion = baseQuaternion.clone().multiply(
       new THREE.Quaternion().setFromEuler(getCardFloatRotation(index, elapsed))
     );
