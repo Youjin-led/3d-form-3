@@ -1,5 +1,6 @@
 ﻿import * as THREE from 'three';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
+import { DRACOLoader } from './vendor/loaders/DRACOLoader.js';
 import { OrbitControls } from './vendor/controls/OrbitControls.js';
 import { EffectComposer } from './vendor/postprocessing/EffectComposer.js';
 import { RenderPass } from './vendor/postprocessing/RenderPass.js';
@@ -26,7 +27,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-hover-wide-hit-v23';
+const ASSET_VERSION = 'jelly-draco-scene-v24';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1724,7 +1725,10 @@ const spineBlue = new THREE.PointLight(0x16c9ff, 7.6, 13);
 spineBlue.position.set(1.6, -0.9, -1.6);
 scene.add(spineBlue);
 
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('./vendor/draco/gltf/');
 const loader = new GLTFLoader();
+loader.setDRACOLoader(dracoLoader);
 const shaderClock = { value: 0 };
 const cardTextureCache = new Map();
 const cardBackTextureCache = new Map();
