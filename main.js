@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-hover-scale-boost-v9';
+const ASSET_VERSION = 'jelly-hover-strong-zoom-v10';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1207,7 +1207,7 @@ function getCardFocusPosition(sourcePosition) {
   camera.getWorldDirection(cameraDirection).normalize();
   const depth = sourcePosition.clone().sub(camera.position).dot(cameraDirection);
   const screenCenter = camera.position.clone().add(cameraDirection.clone().multiplyScalar(depth));
-  const approachPull = USE_BAKED_GEONODES_JELLYFISH ? getResponsiveSettings().focusPull * 2.6 : getResponsiveSettings().focusPull;
+  const approachPull = USE_BAKED_GEONODES_JELLYFISH ? getResponsiveSettings().focusPull * 4.0 : getResponsiveSettings().focusPull;
   return screenCenter.add(cameraDirection.clone().multiplyScalar(-approachPull));
 }
 
@@ -1230,10 +1230,10 @@ function getJellyfishHoverScaleBoost(object, baseScale) {
   }
   const baseHeight = object.userData.baseVisualHeight || 1;
   const screenWorldHeight = viewHeight / Math.max(camera.zoom, 0.001);
-  const targetHoodHeight = screenWorldHeight * 0.34;
+  const targetHoodHeight = screenWorldHeight * 0.72;
   const hoodRatio = object.userData.jellyfishHoodHeightRatio || 0.28;
   const currentHoodHeight = Math.max(baseHeight * hoodRatio, 0.001);
-  const targetMultiplier = THREE.MathUtils.clamp(targetHoodHeight / currentHoodHeight, 1.72, 2.45);
+  const targetMultiplier = THREE.MathUtils.clamp(targetHoodHeight / currentHoodHeight, 2.8, 4.2);
   return Math.max(0, targetMultiplier - 1);
 }
 
