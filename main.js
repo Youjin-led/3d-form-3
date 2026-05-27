@@ -20,7 +20,9 @@ const RESTORE_SCENE_CARDS = true;
 const USE_SCENE_CARD_SOURCE_MATERIALS = false;
 const USE_BAKED_SCENE_CAMERA = true;
 const MATCH_PUBLISHED_CARD_LAYOUT = true;
-const PUBLISHED_CARD_TARGET_WIDTH = 1.925;
+const USE_JELLYFISH_CARD_MODE = true;
+const USE_BAKED_GEONODES_JELLYFISH = true;
+const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
@@ -790,6 +792,9 @@ function applyPublishedCardLayout(model) {
 
     object.position.copy(position);
     object.quaternion.fromArray(transform.quaternion);
+    if (USE_JELLYFISH_CARD_MODE && /^spiral_project_card_\d+_image$/i.test(object.name)) {
+      object.quaternion.copy(camera.quaternion);
+    }
     object.scale.fromArray(transform.scale);
     object.visible = true;
     object.updateMatrix();
@@ -854,6 +859,160 @@ function applyPublishedCardLayout(model) {
   }));
 }
 
+function registerBlenderJellyfishAnimations(model, animations = []) {
+  sceneAnimationMixers.length = 0;
+  jellyfishAnimationActions.clear();
+  window.__GLTF_ANIMATIONS = animations.map((clip) => clip.name);
+  window.__JELLYFISH_ANIMATION_ACTIONS = [];
+  if (!animations.length) return;
+
+  const mixer = new THREE.AnimationMixer(model);
+  sceneAnimationMixers.push(mixer);
+  animations.forEach((clip) => {
+    const action = mixer.clipAction(clip);
+    action.setLoop(THREE.LoopRepeat, Infinity);
+    action.enabled = true;
+    action.setEffectiveWeight(1);
+    action.play();
+
+    const match = clip.name.match(/^jellyfish_swim_(\d+)/i);
+    if (!match) return;
+    const index = Number(match[1]);
+    if (!jellyfishAnimationActions.has(index)) {
+      jellyfishAnimationActions.set(index, []);
+    }
+    jellyfishAnimationActions.get(index).push(action);
+  });
+
+  window.__JELLYFISH_ANIMATION_ACTIONS = Array.from(jellyfishAnimationActions.entries()).map(([index, actions]) => ({
+    index,
+    clips: actions.map((action) => action.getClip().name)
+  }));
+}
+
+function makeBakedJellyfishMaterial(index) {
+  const palette = [
+    { color: 0xf5a0ff, emissive: 0xff52d8 },
+    { color: 0xff8cc8, emissive: 0xff3c92 },
+    { color: 0xb7d7ff, emissive: 0x54d8ff },
+    { color: 0xffb18a, emissive: 0xff5868 }
+  ];
+  const tint = palette[index % palette.length];
+  return new THREE.MeshPhysicalMaterial({
+    color: tint.color,
+    transparent: true,
+    opacity: 0.28,
+    roughness: 0.50,
+    metalness: 0,
+    transmission: 0.04,
+    thickness: 0.35,
+    emissive: new THREE.Color(tint.emissive),
+    emissiveIntensity: 0.11,
+    side: THREE.DoubleSide,
+    depthWrite: false
+  });
+}
+
+function remapMorphClipForObject(clip, objectName, phaseOffset = 0) {
+  const tracks = clip.tracks.map((track) => {
+    const cloned = track.clone();
+    cloned.name = cloned.name.replace(/^[^.]+(?=\.morphTargetInfluences)/, objectName);
+    return cloned;
+  });
+  const remapped = new THREE.AnimationClip(`${objectName}_${clip.name}`, clip.duration, tracks);
+  remapped.userData = { phaseOffset };
+  return remapped;
+}
+
+function replaceCardsWithBakedJellyfish(model, bakedGltf) {
+  if (!USE_BAKED_GEONODES_JELLYFISH || !USE_JELLYFISH_CARD_MODE) return;
+  const sourceMesh = bakedGltf.scene.getObjectByProperty('type', 'Mesh')
+    || bakedGltf.scene.getObjectByProperty('isMesh', true);
+  if (!sourceMesh?.geometry) return;
+
+  const sourceGeometry = sourceMesh.geometry;
+  const clips = bakedGltf.animations || [];
+  let replaced = 0;
+  const box = new THREE.Box3();
+  const size = new THREE.Vector3();
+
+  model.traverse((object) => {
+    const match = object.name.match(/^spiral_project_card_(\d+)_image$/i);
+    if (!object.isMesh || !match) return;
+    const index = Number(match[1]);
+    object.geometry = sourceGeometry;
+    object.geometry.computeBoundingBox();
+    object.updateMorphTargets?.();
+    object.material = makeBakedJellyfishMaterial(index);
+    if (sourceMesh.morphTargetDictionary) {
+      object.morphTargetDictionary = { ...sourceMesh.morphTargetDictionary };
+    }
+    if (!object.morphTargetInfluences?.length) {
+      object.morphTargetInfluences = new Array(object.geometry.morphAttributes?.position?.length || 0).fill(0);
+    }
+    object.frustumCulled = false;
+    object.renderOrder = 2;
+    object.userData.isBakedGeonodesJellyfish = true;
+    object.userData.jellyfishTopDrift = false;
+    object.userData.jellyfishAnimationWeight = 1;
+
+    box.setFromObject(object);
+    box.getSize(size);
+    const localHeight = Math.max(size.y, size.x, 0.001);
+    const targetHeight = getResponsiveSettings().portrait ? 4.05 : 3.35;
+    const scaleFactor = targetHeight / localHeight;
+    object.scale.multiplyScalar(scaleFactor);
+    object.updateMatrix();
+    object.updateMatrixWorld(true);
+
+    const mixer = new THREE.AnimationMixer(object);
+    sceneAnimationMixers.push(mixer);
+    const actions = clips.map((clip, clipIndex) => {
+      const remapped = remapMorphClipForObject(clip, object.name, index * 0.19 + clipIndex * 0.03);
+      const action = mixer.clipAction(remapped);
+      action.setLoop(THREE.LoopRepeat, Infinity);
+      action.enabled = true;
+      action.setEffectiveWeight(1);
+      action.play();
+      action.time = (index * 0.19) % Math.max(remapped.duration, 0.001);
+      return action;
+    });
+    if (actions.length) {
+      jellyfishAnimationActions.set(index, actions);
+    }
+    replaced += 1;
+  });
+
+  floatingCards.forEach((card) => {
+    if (!card.object.userData.isBakedGeonodesJellyfish) return;
+    card.baseScale = card.object.scale.clone();
+  });
+  window.__BAKED_GEONODES_JELLYFISH = {
+    replaced,
+    clips: clips.map((clip) => clip.name),
+    sourceVertices: sourceGeometry.attributes.position?.count || 0
+  };
+}
+
+function updateJellyfishAnimationForHeight(object, index) {
+  if (!USE_JELLYFISH_CARD_MODE || !/_image$/i.test(object.name)) return;
+  const actions = jellyfishAnimationActions.get(index);
+  if (!actions?.length) return;
+  const topDrift = object.userData.jellyfishTopDrift
+    ? object.position.y > 3.25
+    : object.position.y > 4.55;
+  object.userData.jellyfishTopDrift = topDrift;
+  const currentWeight = object.userData.jellyfishAnimationWeight ?? 1;
+  const targetWeight = topDrift ? 0 : 1;
+  const nextWeight = THREE.MathUtils.lerp(currentWeight, targetWeight, topDrift ? 0.08 : 0.16);
+  object.userData.jellyfishAnimationWeight = nextWeight;
+  actions.forEach((action) => {
+    action.enabled = true;
+    action.paused = false;
+    action.setEffectiveWeight(nextWeight);
+  });
+}
+
 function getCardFloatOffset(index, elapsed, basePosition = new THREE.Vector3()) {
   const phase = index * 0.73;
   const motionTime = elapsed * CARD_MOTION_SPEED;
@@ -887,6 +1046,31 @@ function getCardRouteOffset(index, elapsed, basePosition) {
   const body = getBodyForCard(index);
   const collisionOffset = body ? body.collisionOffset : new THREE.Vector3();
   return getCardFloatOffset(index, elapsed, basePosition).add(collisionOffset);
+}
+
+function keepJellyfishAwayFromUi(position) {
+  if (!USE_JELLYFISH_CARD_MODE) return position;
+  const settings = getResponsiveSettings();
+  const leftLimit = window.innerWidth < 700 ? -2.55 : -2.85;
+  const rightLimit = window.innerWidth < 700 ? 3.35 : 5.35;
+  const lowerLimit = settings.portrait ? -4.65 : -4.80;
+  const upperLimit = settings.portrait ? 5.55 : 5.85;
+  position.x = THREE.MathUtils.clamp(position.x, leftLimit, rightLimit);
+  position.y = THREE.MathUtils.clamp(position.y, lowerLimit, upperLimit);
+  if (window.innerWidth >= 700 && position.x < 1.05 && position.y < 0.35) {
+    position.x = 1.05;
+    position.y = Math.max(position.y, -2.15);
+  }
+  if (window.innerWidth >= 700) {
+    const projected = position.clone().project(camera);
+    const screenX = (projected.x * 0.5 + 0.5) * window.innerWidth;
+    const screenY = (-projected.y * 0.5 + 0.5) * window.innerHeight;
+    if (screenX < 285 && screenY > 500) {
+      position.x += 3.8;
+      position.y = Math.max(position.y, -1.2);
+    }
+  }
+  return position;
 }
 
 function captureHoveredCardPose(index) {
@@ -1085,7 +1269,8 @@ function updateFloatingCards(elapsed) {
   floatingCards.forEach(({ object, index, basePosition, baseQuaternion, baseScale, baseRenderOrder }) => {
     const body = getBodyForCard(index);
     const hoverAmount = body ? body.hoverAmount : 0;
-    const routePosition = basePosition.clone().add(getCardRouteOffset(index, elapsed, basePosition));
+    let routePosition = basePosition.clone().add(getCardRouteOffset(index, elapsed, basePosition));
+    keepJellyfishAwayFromUi(routePosition);
     const routeQuaternion = baseQuaternion.clone().multiply(
       new THREE.Quaternion().setFromEuler(getCardFloatRotation(index, elapsed))
     );
@@ -1102,7 +1287,9 @@ function updateFloatingCards(elapsed) {
       delete object.userData.hoverFreezePosition;
       delete object.userData.hoverFreezeQuaternion;
     }
-    object.scale.copy(baseScale).multiplyScalar(1 + hoverAmount * getResponsiveSettings().focusScaleBoost);
+    object.scale.copy(baseScale);
+    object.scale.multiplyScalar(1 + hoverAmount * getResponsiveSettings().focusScaleBoost);
+    updateJellyfishAnimationForHeight(object, index);
     if (hoverAmount > 0.02) {
       object.renderOrder = 120 + (object.name.includes('_edge') ? 1 : 2);
       setObjectDepthTest(object, false);
@@ -1142,7 +1329,7 @@ function buildCardRail(model) {
   });
 
   cards.sort((a, b) => a.index - b.index);
-  if (!BAKED_SPINE_VIEW) {
+  if (!BAKED_SPINE_VIEW && !USE_JELLYFISH_CARD_MODE) {
     addReadableCardText(cards);
   }
   cardRail.stops = cards.map(({ center }, index) => {
@@ -1334,6 +1521,8 @@ const cardTextSprites = [];
 const floatingCards = [];
 const cardBodies = [];
 const cardHoverObjects = [];
+const sceneAnimationMixers = [];
+const jellyfishAnimationActions = new Map();
 const cardTitles = [
   'SUSTAINABLE\nHORIZONS',
   'E.C.H.O.',
@@ -2067,6 +2256,7 @@ function makeBakedSceneCardMaterial(label, source) {
 }
 function toDisplayMaterial(label, source) {
   const isSpaceDust = /star|dust|constellation|milky|deep_space/.test(label);
+  const isJellyfish = /jellyfish/.test(label);
   const isCard = /spiral_project_card|reference_card/.test(label);
   const isSpine = /vertebra|process|lumbar|wet_iridescent/.test(label);
   const isWorld = /deep_black|world_shell|background/.test(label);
@@ -2101,6 +2291,36 @@ function toDisplayMaterial(label, source) {
     return material;
   }
 
+  if (isJellyfish) {
+    const color = /fine_pink_tentacles|pink_fine|fine_strands/.test(label)
+      ? 0xff6fae
+      : /orange_ruffle|orange_tentacles|real_orange/.test(label)
+        ? 0xff6f96
+        : /peach_oral|warm_inner/.test(label)
+          ? 0xff8a62
+          : /lilac/.test(label)
+            ? 0xa58cff
+            : /rose/.test(label)
+              ? 0xff6da8
+              : (source.color || new THREE.Color(0x72d9ea));
+    const opacity = /fine_pink_tentacles|pink_fine|fine_strands/.test(label)
+      ? 0.34
+      : /orange_ruffle|orange_tentacles|real_orange/.test(label)
+        ? 0.42
+        : /peach_oral|warm_inner/.test(label)
+          ? 0.44
+          : 0.38;
+    return new THREE.MeshBasicMaterial({
+      name: source.name,
+      color,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.NormalBlending
+    });
+  }
+
   if (isCard) {
     if (BAKED_SPINE_VIEW && RESTORE_SCENE_CARDS && !USE_SCENE_CARD_SOURCE_MATERIALS) {
       return makeBakedSceneCardMaterial(label, source);
@@ -2129,9 +2349,20 @@ async function loadBlenderMaterialOverrides() {
   return response.json();
 }
 
+function loadBakedGeonodesJellyfishAsset() {
+  return new Promise((resolve, reject) => {
+    loader.load(
+      './assets/baked_geonodes_jellyfish.glb',
+      resolve,
+      undefined,
+      reject
+    );
+  });
+}
+
 loadBlenderMaterialOverrides().then((materialOverrides) => loader.load(
   './assets/scene.glb',
-  (gltf) => {
+  async (gltf) => {
     const model = gltf.scene;
     window.__THREE_MODEL = model;
     model.traverse((object) => {
@@ -2191,6 +2422,13 @@ loadBlenderMaterialOverrides().then((materialOverrides) => loader.load(
     });
 
     applyPublishedCardLayout(model);
+    if (USE_BAKED_GEONODES_JELLYFISH) {
+      const bakedJellyfish = await loadBakedGeonodesJellyfishAsset();
+      registerBlenderJellyfishAnimations(model, []);
+      replaceCardsWithBakedJellyfish(model, bakedJellyfish);
+    } else {
+      registerBlenderJellyfishAnimations(model, gltf.animations);
+    }
     scene.add(model);
     buildCardRail(model);
 
@@ -2253,8 +2491,10 @@ const clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
-  const elapsed = clock.getElapsedTime();
+  const delta = Math.min(clock.getDelta(), 0.05);
+  const elapsed = clock.elapsedTime;
   shaderClock.value = elapsed;
+  sceneAnimationMixers.forEach((mixer) => mixer.update(delta));
   cyanLight.intensity = 5.2 + Math.sin(elapsed * 0.7) * 0.4;
   magentaLight.intensity = 5.0 + Math.cos(elapsed * 0.58) * 0.45;
   violetLight.intensity = 5.0 + Math.sin(elapsed * 0.43) * 0.35;
