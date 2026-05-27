@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-hover-approach-v5';
+const ASSET_VERSION = 'jelly-hover-face-camera-v6';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1214,6 +1214,15 @@ function getCardFocusQuaternion() {
   return camera.getWorldQuaternion(new THREE.Quaternion());
 }
 
+function getJellyfishScreenFacingQuaternion(objectPosition, baseQuaternion) {
+  const toCamera = camera.position.clone().sub(objectPosition).normalize();
+  if (toCamera.lengthSq() < 0.001) {
+    return getCardFocusQuaternion();
+  }
+  const localBellAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(baseQuaternion).normalize();
+  return new THREE.Quaternion().setFromUnitVectors(localBellAxis, toCamera).multiply(baseQuaternion);
+}
+
 function getJellyfishHoverScaleBoost(object, baseScale) {
   if (!USE_BAKED_GEONODES_JELLYFISH || !object.userData.isBakedGeonodesJellyfish) {
     return getResponsiveSettings().focusScaleBoost;
@@ -1383,7 +1392,10 @@ function updateFloatingCards(elapsed) {
     if (freezePosition && hoverAmount > 0.001) {
       const focusPosition = getCardFocusPosition(freezePosition);
       object.position.copy(routePosition).lerp(focusPosition, hoverAmount);
-      object.quaternion.copy(routeQuaternion).slerp(getCardFocusQuaternion(), hoverAmount);
+      const focusQuaternion = object.userData.isBakedGeonodesJellyfish
+        ? getJellyfishScreenFacingQuaternion(object.position, baseQuaternion)
+        : getCardFocusQuaternion();
+      object.quaternion.copy(routeQuaternion).slerp(focusQuaternion, hoverAmount);
     } else {
       object.position.copy(routePosition);
       object.quaternion.copy(routeQuaternion);
