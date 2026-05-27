@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-hover-fast-approach-v7';
+const ASSET_VERSION = 'jelly-hover-visible-approach-v8';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1195,7 +1195,8 @@ function updateHoveredCardFromPointer() {
       const screenX = (projected.x * 0.5 + 0.5) * rect.width;
       const screenY = (-projected.y * 0.5 + 0.5) * rect.height;
       const distance = Math.hypot(screenX - pointerScreen.x, screenY - pointerScreen.y);
-      if (distance < 330) return;
+      const hoverHoldRadius = hovered.userData.isBakedGeonodesJellyfish ? 920 : 330;
+      if (distance < hoverHoldRadius) return;
     }
   }
   setHoveredCardIndex(null);
@@ -1206,7 +1207,7 @@ function getCardFocusPosition(sourcePosition) {
   camera.getWorldDirection(cameraDirection).normalize();
   const depth = sourcePosition.clone().sub(camera.position).dot(cameraDirection);
   const screenCenter = camera.position.clone().add(cameraDirection.clone().multiplyScalar(depth));
-  const approachPull = USE_BAKED_GEONODES_JELLYFISH ? getResponsiveSettings().focusPull * 1.55 : getResponsiveSettings().focusPull;
+  const approachPull = USE_BAKED_GEONODES_JELLYFISH ? getResponsiveSettings().focusPull * 2.6 : getResponsiveSettings().focusPull;
   return screenCenter.add(cameraDirection.clone().multiplyScalar(-approachPull));
 }
 
@@ -1229,12 +1230,11 @@ function getJellyfishHoverScaleBoost(object, baseScale) {
   }
   const baseHeight = object.userData.baseVisualHeight || 1;
   const screenWorldHeight = viewHeight / Math.max(camera.zoom, 0.001);
-  const targetHoodHeight = screenWorldHeight * 0.25;
+  const targetHoodHeight = screenWorldHeight * 0.38;
   const hoodRatio = object.userData.jellyfishHoodHeightRatio || 0.52;
   const currentHoodHeight = Math.max(baseHeight * hoodRatio, 0.001);
-  const targetMultiplier = THREE.MathUtils.clamp(targetHoodHeight / currentHoodHeight, 1.02, 1.28);
-  const baseMultiplier = baseScale.x ? object.scale.x / baseScale.x : 1;
-  return Math.max(0, targetMultiplier - baseMultiplier);
+  const targetMultiplier = THREE.MathUtils.clamp(targetHoodHeight / currentHoodHeight, 1.28, 1.85);
+  return Math.max(0, targetMultiplier - 1);
 }
 
 function setObjectDepthTest(object, enabled) {
