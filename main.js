@@ -1299,6 +1299,32 @@ function updateFloatingCards(elapsed) {
     object.updateMatrix();
   });
 }
+
+function getReferenceCardRailCards() {
+  const cards = [];
+  const settings = getResponsiveSettings();
+  REFERENCE_CARD_LAYOUT.forEach((item) => {
+    const match = item.name.match(/^spiral_project_card_(\d+)_image$/i);
+    if (!match) {
+      return;
+    }
+    const center = new THREE.Vector3().fromArray(item.position);
+    const radial = new THREE.Vector3(center.x, 0, center.z);
+    if (radial.lengthSq() < 0.01) {
+      radial.set(0, 0, 1);
+    }
+    radial.normalize();
+    center.add(radial.multiplyScalar(settings.cardDistanceOffset));
+    cards.push({
+      index: Number(match[1]),
+      center,
+      size: new THREE.Vector3(PUBLISHED_CARD_TARGET_WIDTH, PUBLISHED_CARD_TARGET_WIDTH, PUBLISHED_CARD_TARGET_WIDTH)
+    });
+  });
+  cards.sort((a, b) => a.index - b.index);
+  return cards;
+}
+
 function buildCardRail(model) {
   if (BAKED_SPINE_VIEW && USE_BAKED_SCENE_CAMERA) {
     cardRail.stops = [];
@@ -1307,26 +1333,27 @@ function buildCardRail(model) {
     updateRailControl();
     return;
   }
-  const cards = [];
-  const box = new THREE.Box3();
-  const center = new THREE.Vector3();
-  const size = new THREE.Vector3();
-  model.updateMatrixWorld(true);
-  model.traverse((object) => {
-    const match = object.name.match(/^spiral_project_card_(\d+)_image$/i);
-    if (!object.isMesh || !match) {
-      return;
-    }
-    box.setFromObject(object);
-    box.getCenter(center);
-    box.getSize(size);
-    cards.push({
-      index: Number(match[1]),
-      center: center.clone(),
-      size: size.clone()
+  const cards = USE_BAKED_GEONODES_JELLYFISH ? getReferenceCardRailCards() : [];
+  if (!cards.length) {
+    const box = new THREE.Box3();
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    model.updateMatrixWorld(true);
+    model.traverse((object) => {
+      const match = object.name.match(/^spiral_project_card_(\d+)_image$/i);
+      if (!object.isMesh || !match) {
+        return;
+      }
+      box.setFromObject(object);
+      box.getCenter(center);
+      box.getSize(size);
+      cards.push({
+        index: Number(match[1]),
+        center: center.clone(),
+        size: size.clone()
+      });
     });
-  });
-
+  }
   cards.sort((a, b) => a.index - b.index);
   if (!BAKED_SPINE_VIEW && !USE_JELLYFISH_CARD_MODE) {
     addReadableCardText(cards);
@@ -1423,9 +1450,7 @@ function moveRail(direction) {
   if (!cardRail.ready) {
     return;
   }
-  const stopCount = cardRail.stops.length;
-  const nextIndex = (cardRail.targetIndex + direction + stopCount) % stopCount;
-  setRailTarget(nextIndex);
+  setRailTarget(cardRail.targetIndex + direction);
 }
 
 function updatePointerFromEvent(event) {
