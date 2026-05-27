@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-tentacle-tuck-v2';
+const ASSET_VERSION = 'jelly-long-stream-v3';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1059,7 +1059,7 @@ function getJellyfishSwimImpulseOffset(index, elapsed, basePosition) {
   if (!USE_BAKED_GEONODES_JELLYFISH || !USE_JELLYFISH_CARD_MODE) {
     return new THREE.Vector3();
   }
-  const clipDuration = 2.5;
+  const clipDuration = 76 / 24;
   const phase = ((elapsed + index * 0.19) / clipDuration) % 1;
   const contraction = swimPulseShape(0.12, 0.18, phase) * (1 - swimPulseShape(0.20, 0.29, phase));
   const recoilRise = swimPulseShape(0.17, 0.28, phase) * (1 - swimPulseShape(0.31, 0.58, phase));
