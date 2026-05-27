@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-hover-visible-approach-v8';
+const ASSET_VERSION = 'jelly-hover-scale-boost-v9';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -963,7 +963,7 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
     const scaleFactor = targetHeight / localHeight;
     object.scale.multiplyScalar(scaleFactor);
     object.userData.baseVisualHeight = targetHeight;
-    object.userData.jellyfishHoodHeightRatio = 0.52;
+    object.userData.jellyfishHoodHeightRatio = 0.28;
     object.updateMatrix();
     object.updateMatrixWorld(true);
 
@@ -1230,10 +1230,10 @@ function getJellyfishHoverScaleBoost(object, baseScale) {
   }
   const baseHeight = object.userData.baseVisualHeight || 1;
   const screenWorldHeight = viewHeight / Math.max(camera.zoom, 0.001);
-  const targetHoodHeight = screenWorldHeight * 0.38;
-  const hoodRatio = object.userData.jellyfishHoodHeightRatio || 0.52;
+  const targetHoodHeight = screenWorldHeight * 0.34;
+  const hoodRatio = object.userData.jellyfishHoodHeightRatio || 0.28;
   const currentHoodHeight = Math.max(baseHeight * hoodRatio, 0.001);
-  const targetMultiplier = THREE.MathUtils.clamp(targetHoodHeight / currentHoodHeight, 1.28, 1.85);
+  const targetMultiplier = THREE.MathUtils.clamp(targetHoodHeight / currentHoodHeight, 1.72, 2.45);
   return Math.max(0, targetMultiplier - 1);
 }
 
