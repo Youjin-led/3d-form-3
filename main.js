@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-hover-smooth-zoom-v11';
+const ASSET_VERSION = 'jelly-glass-chrome-v12';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -897,20 +897,35 @@ function registerBlenderJellyfishAnimations(model, animations = []) {
 
 function makeBakedJellyfishMaterial(index) {
   const palette = [
-    { color: 0xb05dd6, emissive: 0x120616 },
-    { color: 0xca5d92, emissive: 0x160612 },
-    { color: 0x5e9ad0, emissive: 0x061018 },
-    { color: 0xc87858, emissive: 0x160806 }
+    { color: 0xb7f4ff, emissive: 0x0ed8ff },
+    { color: 0xd7c6ff, emissive: 0x7b42ff },
+    { color: 0xf4d8ff, emissive: 0xff4bd8 },
+    { color: 0xc4fff1, emissive: 0x00f5c8 }
   ];
   const tint = palette[index % palette.length];
-  return new THREE.MeshBasicMaterial({
+  const material = new THREE.MeshPhysicalMaterial({
     color: tint.color,
+    emissive: tint.emissive,
+    emissiveIntensity: 0.09,
+    metalness: 0.78,
+    roughness: 0.16,
+    clearcoat: 1,
+    clearcoatRoughness: 0.08,
     transparent: true,
-    opacity: 0.36,
+    opacity: 0.34,
     side: THREE.DoubleSide,
     depthWrite: false,
+    depthTest: true,
+    blending: THREE.NormalBlending,
     toneMapped: false
   });
+  material.ior = 1.42;
+  material.reflectivity = 0.72;
+  material.iridescence = 0.62;
+  material.iridescenceIOR = 1.34;
+  material.iridescenceThicknessRange = [120, 520];
+  material.userData.baseDepthTest = material.depthTest;
+  return material;
 }
 
 function remapMorphClipForObject(clip, objectName, phaseOffset = 0) {
