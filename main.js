@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-spiral-route-v1';
+const ASSET_VERSION = 'jelly-camera-like-spiral-v2';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1026,20 +1026,19 @@ function getJellyfishSpiralTargetPosition(index, elapsed, basePosition = new THR
   }
   const baseAngle = Math.atan2(baseRadial.z, baseRadial.x);
   const baseRadius = THREE.MathUtils.clamp(baseRadial.length(), 3.35, 5.15);
-  const phase = index * 1.618;
-  const motionTime = elapsed * CARD_MOTION_SPEED;
+  const phase = index * 0.173 + (index % 5) * 0.071;
+  const motionTime = elapsed * CARD_MOTION_SPEED * 0.055;
   const direction = index % 2 === 0 ? 1 : -1;
-  const orbitSpeed = 0.22 + (index % 5) * 0.018;
-  const riseSpeed = 0.16 + (index % 4) * 0.015;
-  const climb = motionTime * riseSpeed * direction + phase;
-  const angle = baseAngle + direction * motionTime * orbitSpeed + Math.sin(climb * 0.74) * 0.16;
-  const radius = baseRadius + Math.sin(motionTime * 0.31 + phase) * 0.22 + ((index % 3) - 1) * 0.10;
-  const vertical = Math.sin(climb) * 5.05 + Math.sin(climb * 0.48 + phase * 0.7) * 0.56;
-  const waterWobble = Math.sin(motionTime * 0.62 + phase) * 0.085;
+  const progress = (phase + motionTime * direction) % 1;
+  const wrapped = progress < 0 ? progress + 1 : progress;
+  const vertical = THREE.MathUtils.lerp(-5.35, 5.35, wrapped);
+  const helixTurns = 1.85;
+  const angle = baseAngle + direction * wrapped * Math.PI * 2 * helixTurns;
+  const radius = baseRadius + Math.sin(wrapped * Math.PI * 2 + index * 0.9) * 0.16;
   return new THREE.Vector3(
     spineCenter.x + Math.cos(angle) * radius,
     vertical,
-    spineCenter.z + Math.sin(angle) * radius + waterWobble
+    spineCenter.z + Math.sin(angle) * radius
   );
 }
 
@@ -1052,6 +1051,24 @@ function getCardFloatRotation(index, elapsed) {
     Math.cos(motionTime * 0.72 + phase * 0.8) * 0.031,
     'XYZ'
   );
+}
+
+function getJellyfishPathQuaternion(index, elapsed, basePosition, baseQuaternion) {
+  if (!USE_BAKED_GEONODES_JELLYFISH || !USE_JELLYFISH_CARD_MODE) {
+    return baseQuaternion.clone().multiply(new THREE.Quaternion().setFromEuler(getCardFloatRotation(index, elapsed)));
+  }
+  const current = getJellyfishSpiralTargetPosition(index, elapsed, basePosition);
+  const next = getJellyfishSpiralTargetPosition(index, elapsed + 0.42, basePosition);
+  const direction = next.sub(current).normalize();
+  if (direction.lengthSq() < 0.001) {
+    return baseQuaternion.clone();
+  }
+  const localBellAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(baseQuaternion).normalize();
+  const swimQuaternion = new THREE.Quaternion().setFromUnitVectors(localBellAxis, direction);
+  const targetQuaternion = swimQuaternion.multiply(baseQuaternion);
+  const readableQuaternion = baseQuaternion.clone().slerp(targetQuaternion, 0.46);
+  const waterRoll = new THREE.Quaternion().setFromAxisAngle(direction, Math.sin(elapsed * 0.42 + index) * 0.055);
+  return waterRoll.multiply(readableQuaternion);
 }
 
 function getBodyForCard(index) {
@@ -1097,7 +1114,6 @@ function keepJellyfishAwayFromUi(position) {
   position.y = THREE.MathUtils.clamp(position.y, lowerLimit, upperLimit);
   if (window.innerWidth >= 700 && position.x < 1.05 && position.y < 0.35) {
     position.x = 1.05;
-    position.y = Math.max(position.y, -2.15);
   }
   if (window.innerWidth >= 700) {
     const projected = position.clone().project(camera);
@@ -1105,7 +1121,6 @@ function keepJellyfishAwayFromUi(position) {
     const screenY = (-projected.y * 0.5 + 0.5) * window.innerHeight;
     if (screenX < 285 && screenY > 500) {
       position.x += 3.8;
-      position.y = Math.max(position.y, -1.2);
     }
   }
   return position;
@@ -1326,9 +1341,7 @@ function updateFloatingCards(elapsed) {
     let routePosition = basePosition.clone().add(getCardRouteOffset(index, elapsed, basePosition));
     keepJellyfishAwayFromUi(routePosition);
     keepJellyfishOrbitDistance(routePosition);
-    const routeQuaternion = baseQuaternion.clone().multiply(
-      new THREE.Quaternion().setFromEuler(getCardFloatRotation(index, elapsed))
-    );
+    const routeQuaternion = getJellyfishPathQuaternion(index, elapsed, basePosition, baseQuaternion);
     const freezePosition = object.userData.hoverFreezePosition;
     if (freezePosition && hoverAmount > 0.001) {
       const focusPosition = getCardFocusPosition(freezePosition);
