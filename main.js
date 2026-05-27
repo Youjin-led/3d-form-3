@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-camera-like-spiral-v2';
+const ASSET_VERSION = 'jelly-smooth-helix-v4';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1025,16 +1025,18 @@ function getJellyfishSpiralTargetPosition(index, elapsed, basePosition = new THR
     baseRadial.set(index % 2 === 0 ? 1 : -1, 0, 0.35);
   }
   const baseAngle = Math.atan2(baseRadial.z, baseRadial.x);
-  const baseRadius = THREE.MathUtils.clamp(baseRadial.length(), 3.35, 5.15);
+  const radiusBand = 4.45 + ((index % 5) - 2) * 0.23;
+  const baseRadius = THREE.MathUtils.lerp(THREE.MathUtils.clamp(baseRadial.length(), 3.9, 5.2), radiusBand, 0.62);
   const phase = index * 0.173 + (index % 5) * 0.071;
   const motionTime = elapsed * CARD_MOTION_SPEED * 0.055;
   const direction = index % 2 === 0 ? 1 : -1;
-  const progress = (phase + motionTime * direction) % 1;
-  const wrapped = progress < 0 ? progress + 1 : progress;
+  const rawProgress = phase + motionTime * direction;
+  const cycle = ((rawProgress % 2) + 2) % 2;
+  const wrapped = cycle <= 1 ? cycle : 2 - cycle;
   const vertical = THREE.MathUtils.lerp(-5.35, 5.35, wrapped);
   const helixTurns = 1.85;
-  const angle = baseAngle + direction * wrapped * Math.PI * 2 * helixTurns;
-  const radius = baseRadius + Math.sin(wrapped * Math.PI * 2 + index * 0.9) * 0.16;
+  const angle = baseAngle + direction * rawProgress * Math.PI * 2 * helixTurns;
+  const radius = baseRadius + Math.sin(wrapped * Math.PI * 2 + index * 0.9) * 0.08;
   return new THREE.Vector3(
     spineCenter.x + Math.cos(angle) * radius,
     vertical,
@@ -1077,9 +1079,12 @@ function getBodyForCard(index) {
 
 function getCardRouteOffset(index, elapsed, basePosition) {
   const body = getBodyForCard(index);
-  const collisionOffset = body ? body.collisionOffset : new THREE.Vector3();
+  const collisionOffset = body && !USE_BAKED_GEONODES_JELLYFISH ? body.collisionOffset : new THREE.Vector3();
+  const swimImpulse = USE_BAKED_GEONODES_JELLYFISH
+    ? new THREE.Vector3()
+    : getJellyfishSwimImpulseOffset(index, elapsed, basePosition);
   return getCardFloatOffset(index, elapsed, basePosition)
-    .add(getJellyfishSwimImpulseOffset(index, elapsed, basePosition))
+    .add(swimImpulse)
     .add(collisionOffset);
 }
 
@@ -1105,6 +1110,7 @@ function getJellyfishSwimImpulseOffset(index, elapsed, basePosition) {
 
 function keepJellyfishAwayFromUi(position) {
   if (!USE_JELLYFISH_CARD_MODE) return position;
+  if (USE_BAKED_GEONODES_JELLYFISH) return position;
   const settings = getResponsiveSettings();
   const leftLimit = window.innerWidth < 700 ? -2.55 : -2.85;
   const rightLimit = window.innerWidth < 700 ? 3.35 : 5.35;
@@ -1136,7 +1142,7 @@ function keepJellyfishOrbitDistance(position) {
   } else {
     radial.normalize();
   }
-  const targetDistance = THREE.MathUtils.clamp(distance, 3.35, 5.75);
+  const targetDistance = THREE.MathUtils.clamp(distance, 3.55, 5.35);
   position.x = spineCenter.x + radial.x * targetDistance;
   position.z = spineCenter.z + radial.z * targetDistance;
   return position;
@@ -1333,7 +1339,14 @@ function updateFloatingCards(elapsed) {
     updateHoveredCardFromPointer();
     pointerNeedsRaycast = false;
   }
-  resolveFloatingCardCollisions(elapsed);
+  if (USE_BAKED_GEONODES_JELLYFISH) {
+    cardBodies.forEach((body) => {
+      body.collisionOffset.multiplyScalar(0.88);
+      body.collisionVelocity.multiplyScalar(0.72);
+    });
+  } else {
+    resolveFloatingCardCollisions(elapsed);
+  }
   updateCardHoverTargets();
   floatingCards.forEach(({ object, index, basePosition, baseQuaternion, baseScale, baseRenderOrder }) => {
     const body = getBodyForCard(index);
@@ -1341,6 +1354,13 @@ function updateFloatingCards(elapsed) {
     let routePosition = basePosition.clone().add(getCardRouteOffset(index, elapsed, basePosition));
     keepJellyfishAwayFromUi(routePosition);
     keepJellyfishOrbitDistance(routePosition);
+    if (USE_BAKED_GEONODES_JELLYFISH) {
+      if (!object.userData.smoothRoutePosition) {
+        object.userData.smoothRoutePosition = object.position.clone();
+      }
+      object.userData.smoothRoutePosition.lerp(routePosition, 0.075);
+      routePosition = object.userData.smoothRoutePosition.clone();
+    }
     const routeQuaternion = getJellyfishPathQuaternion(index, elapsed, basePosition, baseQuaternion);
     const freezePosition = object.userData.hoverFreezePosition;
     if (freezePosition && hoverAmount > 0.001) {
