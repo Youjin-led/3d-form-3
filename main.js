@@ -1044,7 +1044,29 @@ function getBodyForCard(index) {
 function getCardRouteOffset(index, elapsed, basePosition) {
   const body = getBodyForCard(index);
   const collisionOffset = body ? body.collisionOffset : new THREE.Vector3();
-  return getCardFloatOffset(index, elapsed, basePosition).add(collisionOffset);
+  return getCardFloatOffset(index, elapsed, basePosition)
+    .add(getJellyfishSwimImpulseOffset(index, elapsed, basePosition))
+    .add(collisionOffset);
+}
+
+function swimPulseShape(edge0, edge1, value) {
+  const x = THREE.MathUtils.clamp((value - edge0) / Math.max(edge1 - edge0, 0.0001), 0, 1);
+  return x * x * (3 - 2 * x);
+}
+
+function getJellyfishSwimImpulseOffset(index, elapsed, basePosition) {
+  if (!USE_BAKED_GEONODES_JELLYFISH || !USE_JELLYFISH_CARD_MODE) {
+    return new THREE.Vector3();
+  }
+  const clipDuration = 2.5;
+  const phase = ((elapsed + index * 0.19) / clipDuration) % 1;
+  const contraction = swimPulseShape(0.12, 0.18, phase) * (1 - swimPulseShape(0.20, 0.29, phase));
+  const recoilRise = swimPulseShape(0.17, 0.28, phase) * (1 - swimPulseShape(0.31, 0.58, phase));
+  const passiveSink = swimPulseShape(0.46, 0.92, phase) * (1 - swimPulseShape(0.92, 1.0, phase));
+  const topFade = 1 - swimPulseShape(3.65, 5.1, basePosition.y);
+  const impulse = (contraction * 0.36 + recoilRise * 0.58 - passiveSink * 0.16) * topFade;
+  const lateralLag = Math.sin(phase * Math.PI * 2 + index * 0.6) * 0.045 * topFade;
+  return new THREE.Vector3(lateralLag, impulse, 0);
 }
 
 function keepJellyfishAwayFromUi(position) {
