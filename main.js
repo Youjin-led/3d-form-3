@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'c5280f6-jelly-motion';
+const ASSET_VERSION = 'jelly-tentacle-tuck-v2';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
