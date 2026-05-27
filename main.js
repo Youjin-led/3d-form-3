@@ -26,7 +26,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-hover-strong-zoom-v10';
+const ASSET_VERSION = 'jelly-hover-smooth-zoom-v11';
 
 function getResponsiveSettings() {
   const width = window.innerWidth || 1440;
@@ -1260,9 +1260,9 @@ function restoreObjectDepthTest(object) {
 
 function updateCardHoverTargets() {
   cardBodies.forEach((body) => {
-    const approachEase = USE_BAKED_GEONODES_JELLYFISH ? 0.42 : 0.24;
+    const approachEase = USE_BAKED_GEONODES_JELLYFISH ? 0.18 : 0.24;
     body.hoverAmount = THREE.MathUtils.lerp(body.hoverAmount, body.hoverTarget, approachEase);
-    if (body.hoverTarget === 1 && body.hoverAmount > 0.93) {
+    if (body.hoverTarget === 1 && body.hoverAmount > 0.985) {
       body.hoverAmount = 1;
     }
     if (body.hoverTarget === 0 && body.hoverAmount < 0.018) {
