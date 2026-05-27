@@ -27,7 +27,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-mobile-optimized-v25';
+const ASSET_VERSION = 'jelly-interaction-smooth-v26';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -46,6 +46,10 @@ function getDeviceProfile() {
       bloomRadius: 0.18,
       bloomThreshold: 0.91,
       filmIntensity: 0.11,
+      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.0),
+      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 0.82),
+      interactionBloomStrength: 0.052,
+      interactionFilmIntensity: 0.08,
       particleScale: 0.54,
       particleOpacity: 0.82,
       textureScale: 0.78,
@@ -60,6 +64,10 @@ function getDeviceProfile() {
       bloomRadius: 0.21,
       bloomThreshold: 0.90,
       filmIntensity: 0.15,
+      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.08),
+      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 0.96),
+      interactionBloomStrength: 0.060,
+      interactionFilmIntensity: 0.10,
       particleScale: 0.70,
       particleOpacity: 0.90,
       textureScale: 0.88,
@@ -73,6 +81,10 @@ function getDeviceProfile() {
     bloomRadius: 0.24,
     bloomThreshold: 0.88,
     filmIntensity: 0.22,
+    interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.32),
+    interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.12),
+    interactionBloomStrength: 0.070,
+    interactionFilmIntensity: 0.14,
     particleScale: 1,
     particleOpacity: 1,
     textureScale: 1,
@@ -777,6 +789,46 @@ const filmPass = new FilmPass(qualityProfile.filmIntensity, false);
 composer.addPass(filmPass);
 composer.addPass(new OutputPass());
 
+const renderQualityState = {
+  interactionActive: false,
+  holdUntil: 0,
+};
+
+function applyRenderQuality(interactionActive) {
+  renderQualityState.interactionActive = interactionActive;
+  const pixelRatio = interactionActive ? qualityProfile.interactionPixelRatio : qualityProfile.pixelRatio;
+  const composerPixelRatio = interactionActive ? qualityProfile.interactionComposerPixelRatio : qualityProfile.composerPixelRatio;
+  renderer.setPixelRatio(pixelRatio);
+  composer.setPixelRatio(composerPixelRatio);
+  bloomPass.strength = interactionActive ? qualityProfile.interactionBloomStrength : qualityProfile.bloomStrength;
+  bloomPass.radius = qualityProfile.bloomRadius;
+  bloomPass.threshold = qualityProfile.bloomThreshold;
+  filmPass.uniforms.intensity.value = interactionActive ? qualityProfile.interactionFilmIntensity : qualityProfile.filmIntensity;
+  window.__RENDER_QUALITY_STATE = {
+    profile: qualityProfile.name,
+    interactionActive,
+    pixelRatio,
+    composerPixelRatio,
+  };
+}
+
+function markInteraction(duration = 700) {
+  renderQualityState.holdUntil = Math.max(renderQualityState.holdUntil, performance.now() + duration);
+}
+
+function updateRenderQualityForInteraction() {
+  const hoverActive = cardBodies.some((body) => body.hoverAmount > 0.015 || body.hoverTarget === 1);
+  const railMoving = cardRail.ready && (
+    cardRail.currentPosition.distanceToSquared(cardRail.targetPosition) > 0.0009
+    || cardRail.currentTarget.distanceToSquared(cardRail.targetTarget) > 0.0009
+    || Math.abs(cardRail.currentZoom - cardRail.targetZoom) > 0.002
+  );
+  const interactionActive = hoverActive || railMoving || performance.now() < renderQualityState.holdUntil;
+  if (interactionActive !== renderQualityState.interactionActive) {
+    applyRenderQuality(interactionActive);
+  }
+}
+
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.055;
@@ -1078,6 +1130,7 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
     cardHoverObjects.push(hitProxy);
 
     const mixer = new THREE.AnimationMixer(object);
+    mixer.userData = { isJellyfishMixer: true, cardIndex: index, deferredDelta: 0 };
     sceneAnimationMixers.push(mixer);
     const actions = clips.map((clip, clipIndex) => {
       const remapped = remapMorphClipForObject(clip, object.name, index * 0.19 + clipIndex * 0.03);
@@ -1276,6 +1329,9 @@ function captureHoveredCardPose(index) {
 function setHoveredCardIndex(index) {
   if (index !== null && index !== hoveredCardIndex) {
     captureHoveredCardPose(index);
+  }
+  if (index !== hoveredCardIndex) {
+    markInteraction(index === null ? 420 : 1200);
   }
   hoveredCardIndex = index;
   cardBodies.forEach((body) => {
@@ -1704,10 +1760,12 @@ function moveRail(direction) {
   if (!cardRail.ready) {
     return;
   }
+  markInteraction(1100);
   setRailTarget(cardRail.targetIndex + direction);
 }
 
 function updatePointerFromEvent(event) {
+  markInteraction(260);
   const rect = renderer.domElement.getBoundingClientRect();
   pointerScreen.x = event.clientX - rect.left;
   pointerScreen.y = event.clientY - rect.top;
@@ -1741,6 +1799,7 @@ window.addEventListener('wheel', (event) => {
     return;
   }
   cardRail.lastWheelAt = now;
+  markInteraction(1200);
   moveRail(event.deltaY > 0 ? 1 : -1);
 }, { passive: false });
 
@@ -1759,6 +1818,7 @@ window.addEventListener('touchmove', (event) => {
   }
   event.preventDefault();
   cardRail.touchY = nextY;
+  markInteraction(1200);
   moveRail(delta > 0 ? 1 : -1);
 }, { passive: false });
 
@@ -2777,13 +2837,36 @@ loadBlenderMaterialOverrides().then((materialOverrides) => loader.load(
 });
 
 const clock = new THREE.Clock();
+let animationFrameIndex = 0;
+
+function updateSceneAnimationMixers(delta) {
+  animationFrameIndex += 1;
+  const activeHoverIndex = hoveredCardIndex;
+  const interactionActive = renderQualityState.interactionActive;
+  sceneAnimationMixers.forEach((mixer) => {
+    const data = mixer.userData || {};
+    if (!interactionActive || !data.isJellyfishMixer || data.cardIndex === activeHoverIndex) {
+      const deferredDelta = data.deferredDelta || 0;
+      data.deferredDelta = 0;
+      mixer.update(delta + deferredDelta);
+      return;
+    }
+    data.deferredDelta = (data.deferredDelta || 0) + delta;
+    const cadence = qualityProfile.name === 'desktop' ? 2 : 3;
+    if ((animationFrameIndex + data.cardIndex) % cadence === 0) {
+      mixer.update(data.deferredDelta);
+      data.deferredDelta = 0;
+    }
+  });
+}
 
 function animate() {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.05);
   const elapsed = clock.elapsedTime;
   shaderClock.value = elapsed;
-  sceneAnimationMixers.forEach((mixer) => mixer.update(delta));
+  updateRenderQualityForInteraction();
+  updateSceneAnimationMixers(delta);
   cyanLight.intensity = 5.2 + Math.sin(elapsed * 0.7) * 0.4;
   magentaLight.intensity = 5.0 + Math.cos(elapsed * 0.58) * 0.45;
   violetLight.intensity = 5.0 + Math.sin(elapsed * 0.43) * 0.35;
@@ -2831,14 +2914,11 @@ window.addEventListener('resize', () => {
     }
   }
   camera.updateProjectionMatrix();
-  renderer.setPixelRatio(qualityProfile.pixelRatio);
+  renderQualityState.interactionActive = false;
+  renderQualityState.holdUntil = performance.now() + 500;
+  applyRenderQuality(false);
   renderer.setSize(window.innerWidth, window.innerHeight);
-  composer.setPixelRatio(qualityProfile.composerPixelRatio);
   composer.setSize(window.innerWidth, window.innerHeight);
-  bloomPass.strength = qualityProfile.bloomStrength;
-  bloomPass.radius = qualityProfile.bloomRadius;
-  bloomPass.threshold = qualityProfile.bloomThreshold;
-  filmPass.uniforms.intensity.value = qualityProfile.filmIntensity;
   bloomPass.setSize(window.innerWidth, window.innerHeight);
 });
 
