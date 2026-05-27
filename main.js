@@ -896,16 +896,16 @@ function registerBlenderJellyfishAnimations(model, animations = []) {
 
 function makeBakedJellyfishMaterial(index) {
   const palette = [
-    { color: 0x7a4d92, emissive: 0x120616 },
-    { color: 0x8a4a70, emissive: 0x160612 },
-    { color: 0x55728f, emissive: 0x061018 },
-    { color: 0x8a6458, emissive: 0x160806 }
+    { color: 0xb05dd6, emissive: 0x120616 },
+    { color: 0xca5d92, emissive: 0x160612 },
+    { color: 0x5e9ad0, emissive: 0x061018 },
+    { color: 0xc87858, emissive: 0x160806 }
   ];
   const tint = palette[index % palette.length];
   return new THREE.MeshBasicMaterial({
     color: tint.color,
     transparent: true,
-    opacity: 0.22,
+    opacity: 0.36,
     side: THREE.DoubleSide,
     depthWrite: false,
     toneMapped: false
@@ -1423,7 +1423,9 @@ function moveRail(direction) {
   if (!cardRail.ready) {
     return;
   }
-  setRailTarget(cardRail.targetIndex + direction);
+  const stopCount = cardRail.stops.length;
+  const nextIndex = (cardRail.targetIndex + direction + stopCount) % stopCount;
+  setRailTarget(nextIndex);
 }
 
 function updatePointerFromEvent(event) {
