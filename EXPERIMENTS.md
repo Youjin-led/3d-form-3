@@ -28,3 +28,11 @@
 - Reduced invisible jellyfish click-proxy radius from full-body/tentacle scale to a smaller body-scale proxy.
 - Changed focused-state click behavior: if a jellyfish is focused, clicking another jellyfish or empty space only releases the current focus.
 - Bumped cache version to `jelly-click-only-v30`.
+
+## 2026-05-28 Mobile/tablet quality recovery
+
+- Raised mobile renderer DPR cap from 1.12 to 1.48 and composer DPR cap from 0.96 to 1.32.
+- Raised tablet renderer DPR cap from 1.28 to 1.58 and composer DPR cap from 1.16 to 1.44.
+- Enabled antialiasing outside desktop profiles.
+- Restored more bloom, film grain, particle density, particle opacity, and generated texture size on mobile/tablet.
+- Slightly tightened mobile/tablet framing so the scene reads with more detail on smaller screens.

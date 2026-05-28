@@ -32,7 +32,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-click-only-v30';
+const ASSET_VERSION = 'mobile-quality-v31';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -45,41 +45,44 @@ function getDeviceProfile() {
   if (mobile) {
     return {
       name: 'mobile',
-      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.12),
-      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 0.96),
-      bloomStrength: 0.064,
-      bloomRadius: 0.18,
-      bloomThreshold: 0.91,
-      filmIntensity: 0.11,
-      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.0),
-      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 0.82),
-      interactionBloomStrength: 0.052,
-      interactionFilmIntensity: 0.08,
-      particleScale: 0.54,
-      particleOpacity: 0.82,
-      textureScale: 0.78,
+      antialias: true,
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.48),
+      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.32),
+      bloomStrength: 0.082,
+      bloomRadius: 0.22,
+      bloomThreshold: 0.885,
+      filmIntensity: 0.16,
+      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.20),
+      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.04),
+      interactionBloomStrength: 0.066,
+      interactionFilmIntensity: 0.12,
+      particleScale: 0.78,
+      particleOpacity: 0.94,
+      textureScale: 0.96,
     };
   }
   if (tablet) {
     return {
       name: 'tablet',
-      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.28),
-      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.16),
-      bloomStrength: 0.074,
-      bloomRadius: 0.21,
-      bloomThreshold: 0.90,
-      filmIntensity: 0.15,
-      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.08),
-      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 0.96),
-      interactionBloomStrength: 0.060,
-      interactionFilmIntensity: 0.10,
-      particleScale: 0.70,
-      particleOpacity: 0.90,
-      textureScale: 0.88,
+      antialias: true,
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.58),
+      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.44),
+      bloomStrength: 0.086,
+      bloomRadius: 0.23,
+      bloomThreshold: 0.882,
+      filmIntensity: 0.19,
+      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.28),
+      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.14),
+      interactionBloomStrength: 0.070,
+      interactionFilmIntensity: 0.14,
+      particleScale: 0.90,
+      particleOpacity: 0.98,
+      textureScale: 1,
     };
   }
   return {
     name: 'desktop',
+    antialias: true,
     pixelRatio: Math.min(window.devicePixelRatio || 1, 1.75),
     composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.75),
     bloomStrength: 0.09,
@@ -100,6 +103,7 @@ function publishQualityProfile() {
   const profile = getDeviceProfile();
   window.__QUALITY_PROFILE = {
     name: profile.name,
+    antialias: profile.antialias,
     pixelRatio: profile.pixelRatio,
     composerPixelRatio: profile.composerPixelRatio,
     particleScale: profile.particleScale,
@@ -114,27 +118,27 @@ function getResponsiveSettings() {
   if (width <= 640) {
     return {
       portrait,
-      viewHeight: portrait ? 17.2 : 13.4,
-      cardTargetWidth: PUBLISHED_CARD_TARGET_WIDTH * 0.78,
-      cardDistanceOffset: 2.55,
-      railZoomScale: portrait ? 0.76 : 0.88,
-      cameraDistanceScale: portrait ? 1.16 : 1.05,
+      viewHeight: portrait ? 15.8 : 12.9,
+      cardTargetWidth: PUBLISHED_CARD_TARGET_WIDTH * 0.84,
+      cardDistanceOffset: 2.76,
+      railZoomScale: portrait ? 0.84 : 0.92,
+      cameraDistanceScale: portrait ? 1.10 : 1.03,
       focusPull: portrait ? 2.15 : 2.45,
       focusScaleBoost: 0.34,
-      textScale: 0.82,
+      textScale: 0.88,
     };
   }
   if (width <= 1024) {
     return {
       portrait,
-      viewHeight: portrait ? 14.8 : 12.8,
-      cardTargetWidth: PUBLISHED_CARD_TARGET_WIDTH * 0.9,
+      viewHeight: portrait ? 13.9 : 12.5,
+      cardTargetWidth: PUBLISHED_CARD_TARGET_WIDTH * 0.94,
       cardDistanceOffset: 3.0,
-      railZoomScale: portrait ? 0.88 : 0.96,
-      cameraDistanceScale: 1.08,
+      railZoomScale: portrait ? 0.94 : 0.98,
+      cameraDistanceScale: 1.04,
       focusPull: 2.75,
       focusScaleBoost: 0.40,
-      textScale: 0.92,
+      textScale: 0.96,
     };
   }
   return {
@@ -761,7 +765,7 @@ camera.lookAt(0, 0, 0);
 window.__THREE_CAMERA = camera;
 
 const renderer = new THREE.WebGLRenderer({
-  antialias: qualityProfile.name === 'desktop',
+  antialias: qualityProfile.antialias,
   alpha: false,
   powerPreference: 'high-performance'
 });

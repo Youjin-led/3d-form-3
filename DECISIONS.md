@@ -28,3 +28,10 @@
 - Jellyfish focus is click-only. Pointer hit testing runs only for click/tap selection, using one pass over raycast intersections with a reusable world-position vector.
 - Click hit proxies are deliberately small and tied to the jellyfish body, not the full tentacle height.
 - When one jellyfish is focused, clicking anywhere except that same jellyfish closes the focus instead of selecting another jellyfish.
+
+## Balanced mobile/tablet quality
+
+- Mobile and tablet profiles now keep WebGL antialiasing enabled and use higher renderer/composer pixel ratios.
+- Particle and generated texture scales are raised on mobile/tablet because the runtime GLB and click-only interaction already removed the largest load and hover costs.
+- Mobile/tablet camera framing is slightly closer so objects do not look small and over-decimated.
+- CSS canvas grading on mobile/tablet is closer to desktop contrast/saturation instead of the earlier muted low-power look.
