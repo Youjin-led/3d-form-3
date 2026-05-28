@@ -36,3 +36,10 @@
 - Enabled antialiasing outside desktop profiles.
 - Restored more bloom, film grain, particle density, particle opacity, and generated texture size on mobile/tablet.
 - Slightly tightened mobile/tablet framing so the scene reads with more detail on smaller screens.
+
+## 2026-05-28 Mobile quality v32
+
+- Raised mobile renderer DPR cap to 1.68 and composer DPR cap to 1.52.
+- Raised tablet renderer DPR cap to 1.72 and composer DPR cap to 1.58.
+- Limited active jellyfish/cards from 15 to 12 before baked mesh replacement, click proxy creation, and rail stop generation.
+- Increased mobile/tablet canvas contrast and saturation while reducing the mobile grade overlay opacity.

@@ -284,7 +284,7 @@ canvas {
 
 @media (max-width: 1180px) {
   canvas {
-    filter: saturate(1.42) contrast(1.23) brightness(0.87);
+    filter: saturate(1.45) contrast(1.25) brightness(0.87);
   }
 
   .top-nav,
@@ -313,7 +313,7 @@ canvas {
 
 @media (max-width: 760px) {
   canvas {
-    filter: saturate(1.38) contrast(1.20) brightness(0.88);
+    filter: saturate(1.45) contrast(1.24) brightness(0.88);
   }
 
   body::before {
@@ -325,7 +325,7 @@ canvas {
   }
 
   .blender-grade {
-    opacity: 0.072;
+    opacity: 0.064;
     background:
       radial-gradient(circle at 50% 40%, rgba(255, 55, 210, 0.14), transparent 24%),
       radial-gradient(circle at 62% 72%, rgba(34, 245, 128, 0.12), transparent 22%),

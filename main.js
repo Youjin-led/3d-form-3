@@ -30,9 +30,10 @@ const USE_JELLYFISH_CARD_MODE = true;
 const USE_BAKED_GEONODES_JELLYFISH = true;
 const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
+const ACTIVE_JELLYFISH_COUNT = 12;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'mobile-quality-v31';
+const ASSET_VERSION = 'mobile-quality-v32';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -46,36 +47,36 @@ function getDeviceProfile() {
     return {
       name: 'mobile',
       antialias: true,
-      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.48),
-      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.32),
-      bloomStrength: 0.082,
-      bloomRadius: 0.22,
-      bloomThreshold: 0.885,
-      filmIntensity: 0.16,
-      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.20),
-      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.04),
-      interactionBloomStrength: 0.066,
-      interactionFilmIntensity: 0.12,
-      particleScale: 0.78,
-      particleOpacity: 0.94,
-      textureScale: 0.96,
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.68),
+      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.52),
+      bloomStrength: 0.088,
+      bloomRadius: 0.235,
+      bloomThreshold: 0.875,
+      filmIntensity: 0.18,
+      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.34),
+      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.18),
+      interactionBloomStrength: 0.072,
+      interactionFilmIntensity: 0.135,
+      particleScale: 0.90,
+      particleOpacity: 1,
+      textureScale: 1,
     };
   }
   if (tablet) {
     return {
       name: 'tablet',
       antialias: true,
-      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.58),
-      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.44),
-      bloomStrength: 0.086,
-      bloomRadius: 0.23,
-      bloomThreshold: 0.882,
-      filmIntensity: 0.19,
-      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.28),
-      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.14),
-      interactionBloomStrength: 0.070,
-      interactionFilmIntensity: 0.14,
-      particleScale: 0.90,
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.72),
+      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.58),
+      bloomStrength: 0.092,
+      bloomRadius: 0.245,
+      bloomThreshold: 0.872,
+      filmIntensity: 0.205,
+      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.42),
+      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.26),
+      interactionBloomStrength: 0.076,
+      interactionFilmIntensity: 0.155,
+      particleScale: 1,
       particleOpacity: 0.98,
       textureScale: 1,
     };
@@ -910,6 +911,7 @@ function applyPublishedCardLayout(model) {
   floatingCards.length = 0;
   cardBodies.length = 0;
   cardHitObjects.length = 0;
+  cardBodyByIndex.clear();
   model.updateMatrixWorld(true);
   model.traverse((object) => {
     const transform = transforms.get(object.name);
@@ -934,11 +936,16 @@ function applyPublishedCardLayout(model) {
 
     const match = object.name.match(/^spiral_project_card_(\d+)_(image|edge)$/i);
     if (match) {
+      const index = Number(match[1]);
+      if (index >= ACTIVE_JELLYFISH_COUNT) {
+        object.visible = false;
+        object.userData.disabledInactiveJellyfishCard = true;
+        return;
+      }
       if (USE_BAKED_GEONODES_JELLYFISH && match[2] === 'edge') {
         object.visible = false;
         return;
       }
-      const index = Number(match[1]);
       if (!cardObjectsByIndex.has(index)) cardObjectsByIndex.set(index, []);
       cardObjectsByIndex.get(index).push(object);
       floatingCards.push({
@@ -1095,6 +1102,11 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
     }
     if (!object.isMesh || !match) return;
     const index = Number(match[1]);
+    if (index >= ACTIVE_JELLYFISH_COUNT) {
+      object.visible = false;
+      object.userData.disabledInactiveJellyfishCard = true;
+      return;
+    }
     object.geometry = sourceGeometry;
     object.geometry.computeBoundingBox();
     object.updateMorphTargets?.();
@@ -1655,6 +1667,10 @@ function getReferenceCardRailCards() {
     if (!match) {
       return;
     }
+    const index = Number(match[1]);
+    if (index >= ACTIVE_JELLYFISH_COUNT) {
+      return;
+    }
     const center = new THREE.Vector3().fromArray(item.position);
     const radial = new THREE.Vector3(center.x, 0, center.z);
     if (radial.lengthSq() < 0.01) {
@@ -1663,7 +1679,7 @@ function getReferenceCardRailCards() {
     radial.normalize();
     center.add(radial.multiplyScalar(settings.cardDistanceOffset));
     cards.push({
-      index: Number(match[1]),
+      index,
       center,
       size: new THREE.Vector3(PUBLISHED_CARD_TARGET_WIDTH, PUBLISHED_CARD_TARGET_WIDTH, PUBLISHED_CARD_TARGET_WIDTH)
     });
@@ -1691,11 +1707,15 @@ function buildCardRail(model) {
       if (!object.isMesh || !match) {
         return;
       }
+      const index = Number(match[1]);
+      if (index >= ACTIVE_JELLYFISH_COUNT) {
+        return;
+      }
       box.setFromObject(object);
       box.getCenter(center);
       box.getSize(size);
       cards.push({
-        index: Number(match[1]),
+        index,
         center: center.clone(),
         size: size.clone()
       });
@@ -1915,10 +1935,7 @@ const cardTitles = [
   'INNER\nORBIT',
   'SYNTHETIC\nDREAMS',
   'PARALLAX\nFIELD',
-  'ZERO\nGRAVITY',
-  'AURORA\nINDEX',
-  'LUMEN\nCIRCUIT',
-  'NIGHT\nCHANNEL'
+  'ZERO\nGRAVITY'
 ];
 
 function makeGlowTexture() {
