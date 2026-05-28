@@ -51,3 +51,10 @@
 - Kept mobile/tablet DPR stable during scroll/touch interaction instead of lowering render resolution.
 - Lowered mobile/tablet particle budgets and foreground additive opacity to reserve frame budget for the jellyfish.
 - Enabled depth testing on foreground dust, cluster, and nebula layers so bright particles cannot draw through the whole scene when close to the camera.
+
+## 2026-05-28 Mobile flare guard v34
+
+- Follow-up after phone testing showed flare increased, so the issue was not only foreground generated particles.
+- Found baked `star/dust/milky` scene materials still used additive blending and high opacity after material conversion.
+- Switched mobile/tablet generated particles and baked space-dust materials to normal blending.
+- Set mobile interaction bloom to 0 and tablet interaction bloom to 0.018 to prevent scroll movement from amplifying near-camera bright layers.

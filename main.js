@@ -33,7 +33,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 12;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'mobile-quality-v33';
+const ASSET_VERSION = 'mobile-quality-v34';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -49,17 +49,17 @@ function getDeviceProfile() {
       antialias: true,
       pixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
       composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.82),
-      bloomStrength: 0.078,
-      bloomRadius: 0.21,
-      bloomThreshold: 0.91,
+      bloomStrength: 0.055,
+      bloomRadius: 0.18,
+      bloomThreshold: 0.94,
       filmIntensity: 0.18,
       interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
       interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.82),
-      interactionBloomStrength: 0.070,
+      interactionBloomStrength: 0,
       interactionFilmIntensity: 0.16,
       particleScale: 0.72,
-      particleOpacity: 0.72,
-      foregroundParticleOpacity: 0.42,
+      particleOpacity: 0.46,
+      foregroundParticleOpacity: 0.22,
       foregroundParticleSize: 0.78,
       textureScale: 1,
     };
@@ -70,17 +70,17 @@ function getDeviceProfile() {
       antialias: true,
       pixelRatio: Math.min(window.devicePixelRatio || 1, 1.92),
       composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.78),
-      bloomStrength: 0.084,
-      bloomRadius: 0.225,
-      bloomThreshold: 0.90,
+      bloomStrength: 0.065,
+      bloomRadius: 0.19,
+      bloomThreshold: 0.925,
       filmIntensity: 0.205,
       interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.92),
       interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.78),
-      interactionBloomStrength: 0.076,
+      interactionBloomStrength: 0.018,
       interactionFilmIntensity: 0.18,
       particleScale: 0.86,
-      particleOpacity: 0.82,
-      foregroundParticleOpacity: 0.52,
+      particleOpacity: 0.58,
+      foregroundParticleOpacity: 0.30,
       foregroundParticleSize: 0.86,
       textureScale: 1,
     };
@@ -2055,6 +2055,7 @@ function addStarField() {
   const particleOpacity = (opacity) => opacity * qualityProfile.particleOpacity;
   const foregroundOpacity = (opacity) => opacity * qualityProfile.particleOpacity * qualityProfile.foregroundParticleOpacity;
   const foregroundSize = (size) => size * qualityProfile.foregroundParticleSize;
+  const particleBlending = qualityProfile.name === 'desktop' ? THREE.AdditiveBlending : THREE.NormalBlending;
 
   function pointsLayer(count, radiusMin, radiusMax, size, opacity) {
     const positions = [];
@@ -2088,7 +2089,7 @@ function addStarField() {
       vertexColors: true,
       transparent: true,
       opacity,
-      blending: THREE.AdditiveBlending,
+      blending: particleBlending,
       depthWrite: false,
       sizeAttenuation: false
     });
@@ -2136,7 +2137,7 @@ function addStarField() {
       vertexColors: true,
       transparent: true,
       opacity,
-      blending: THREE.AdditiveBlending,
+      blending: particleBlending,
       depthWrite: false,
       sizeAttenuation: false
     });
@@ -2168,7 +2169,7 @@ function addStarField() {
       vertexColors: true,
       transparent: true,
       opacity,
-      blending: THREE.AdditiveBlending,
+      blending: particleBlending,
       depthWrite: false,
       depthTest: true,
       sizeAttenuation: false
@@ -2204,7 +2205,7 @@ function addStarField() {
       vertexColors: true,
       transparent: true,
       opacity,
-      blending: THREE.AdditiveBlending,
+      blending: particleBlending,
       depthWrite: false,
       depthTest: true,
       sizeAttenuation: false
@@ -2260,7 +2261,7 @@ function addStarField() {
       map: cluster.tex,
       transparent: true,
       opacity: cluster.order >= 7 ? foregroundOpacity(cluster.opacity) : particleOpacity(cluster.opacity),
-      blending: THREE.AdditiveBlending,
+      blending: particleBlending,
       depthWrite: false,
       depthTest: true,
       side: THREE.DoubleSide
@@ -2285,7 +2286,7 @@ function addStarField() {
       map: cloud.tex,
       transparent: true,
       opacity: cloud.opacity * qualityProfile.particleOpacity,
-      blending: THREE.AdditiveBlending,
+      blending: particleBlending,
       depthWrite: false,
       depthTest: true,
       side: THREE.DoubleSide
@@ -2659,17 +2660,21 @@ function toDisplayMaterial(label, source) {
     const displayColor = source.color ? source.color.clone() : new THREE.Color(0xffffff);
     const isReferenceParticle = /reference_volume_dust|reference_spine_spark|reference_particle/.test(label);
     const isReferenceRibbon = /reference_depth_ribbon|reference_ribbon|milky_way_ribbon/.test(label);
+    const mobileSpaceDust = isSpaceDust && qualityProfile.name !== 'desktop';
     if (isSpaceDust) {
-      displayColor.offsetHSL(0.0, 0.22, 0.04);
+      displayColor.offsetHSL(0.0, mobileSpaceDust ? 0.08 : 0.22, mobileSpaceDust ? -0.08 : 0.04);
     }
     const material = new THREE.MeshBasicMaterial({
       name: source.name,
       map: source.map || null,
       color: displayColor,
       transparent: true,
-      opacity: isReferenceParticle ? 0.58 : isReferenceRibbon ? 0.10 : isSpaceDust ? 0.14 : 0.72,
-      blending: isSpaceDust ? THREE.AdditiveBlending : THREE.NormalBlending,
+      opacity: mobileSpaceDust
+        ? (isReferenceParticle ? 0.16 : isReferenceRibbon ? 0.035 : 0.055)
+        : (isReferenceParticle ? 0.58 : isReferenceRibbon ? 0.10 : isSpaceDust ? 0.14 : 0.72),
+      blending: mobileSpaceDust ? THREE.NormalBlending : isSpaceDust ? THREE.AdditiveBlending : THREE.NormalBlending,
       depthWrite: false,
+      depthTest: true,
       side: THREE.DoubleSide
     });
     return material;

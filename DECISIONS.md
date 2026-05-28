@@ -47,3 +47,9 @@
 - Mobile/tablet interaction no longer drops renderer or composer DPR, so jellyfish stay sharp while scrolling.
 - Mobile/tablet renderer DPR caps were raised again and paid for by reducing background particle density/opacity.
 - Foreground additive dust and nebula layers now keep depth testing enabled and use lower mobile opacity/size to avoid full-screen flare when the camera crosses them.
+
+## Mobile flare guard v34
+
+- Mobile scroll/touch interaction disables bloom instead of only reducing it.
+- Generated starfield, cluster, and nebula layers use normal alpha blending on mobile/tablet; desktop keeps additive glow.
+- Baked GLB star/dust/milky materials are also softened on mobile/tablet with normal blending, lower opacity, and explicit depth testing.
