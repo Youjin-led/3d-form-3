@@ -59,3 +59,9 @@
 - Mobile/tablet bloom strength is now stable during and after scroll, avoiding the visible color/glow jump when interaction ends.
 - Constellation color is restored through stronger mobile particle opacity and baked dust saturation instead of additive blending.
 - Foreground near-camera particles stay heavily capped, so the color return does not reintroduce full-screen white flares.
+
+## Stable mobile interaction grade v36
+
+- Mobile/tablet no longer switch any visual render grade during scroll: DPR, composer DPR, bloom, and film stay identical between idle and interaction.
+- `interactionActive` is still tracked for animation cadence and diagnostics, but `stableInteractionGrade` prevents postprocessing changes on mobile/tablet.
+- Render diagnostics now expose whether interaction grade is actually used, plus current bloom and film values for screenshot QA.

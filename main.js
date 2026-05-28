@@ -33,7 +33,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 12;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'mobile-quality-v35';
+const ASSET_VERSION = 'mobile-quality-v36';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -56,11 +56,12 @@ function getDeviceProfile() {
       interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
       interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.82),
       interactionBloomStrength: 0.038,
-      interactionFilmIntensity: 0.16,
+      interactionFilmIntensity: 0.18,
       particleScale: 0.72,
       particleOpacity: 0.68,
       foregroundParticleOpacity: 0.16,
       foregroundParticleSize: 0.78,
+      stableInteractionGrade: true,
       textureScale: 1,
     };
   }
@@ -77,11 +78,12 @@ function getDeviceProfile() {
       interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.92),
       interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.78),
       interactionBloomStrength: 0.048,
-      interactionFilmIntensity: 0.18,
+      interactionFilmIntensity: 0.205,
       particleScale: 0.86,
       particleOpacity: 0.76,
       foregroundParticleOpacity: 0.20,
       foregroundParticleSize: 0.86,
+      stableInteractionGrade: true,
       textureScale: 1,
     };
   }
@@ -102,6 +104,7 @@ function getDeviceProfile() {
     particleOpacity: 1,
     foregroundParticleOpacity: 1,
     foregroundParticleSize: 1,
+    stableInteractionGrade: false,
     textureScale: 1,
   };
 }
@@ -114,6 +117,7 @@ function publishQualityProfile() {
     pixelRatio: profile.pixelRatio,
     composerPixelRatio: profile.composerPixelRatio,
     particleScale: profile.particleScale,
+    stableInteractionGrade: profile.stableInteractionGrade,
   };
   return profile;
 }
@@ -814,19 +818,24 @@ const renderQualityState = {
 
 function applyRenderQuality(interactionActive) {
   renderQualityState.interactionActive = interactionActive;
-  const pixelRatio = interactionActive ? qualityProfile.interactionPixelRatio : qualityProfile.pixelRatio;
-  const composerPixelRatio = interactionActive ? qualityProfile.interactionComposerPixelRatio : qualityProfile.composerPixelRatio;
+  const useInteractionGrade = interactionActive && !qualityProfile.stableInteractionGrade;
+  const pixelRatio = useInteractionGrade ? qualityProfile.interactionPixelRatio : qualityProfile.pixelRatio;
+  const composerPixelRatio = useInteractionGrade ? qualityProfile.interactionComposerPixelRatio : qualityProfile.composerPixelRatio;
   renderer.setPixelRatio(pixelRatio);
   composer.setPixelRatio(composerPixelRatio);
-  bloomPass.strength = interactionActive ? qualityProfile.interactionBloomStrength : qualityProfile.bloomStrength;
+  bloomPass.strength = useInteractionGrade ? qualityProfile.interactionBloomStrength : qualityProfile.bloomStrength;
   bloomPass.radius = qualityProfile.bloomRadius;
   bloomPass.threshold = qualityProfile.bloomThreshold;
-  filmPass.uniforms.intensity.value = interactionActive ? qualityProfile.interactionFilmIntensity : qualityProfile.filmIntensity;
+  filmPass.uniforms.intensity.value = useInteractionGrade ? qualityProfile.interactionFilmIntensity : qualityProfile.filmIntensity;
   window.__RENDER_QUALITY_STATE = {
     profile: qualityProfile.name,
     interactionActive,
+    stableInteractionGrade: qualityProfile.stableInteractionGrade,
+    useInteractionGrade,
     pixelRatio,
     composerPixelRatio,
+    bloomStrength: bloomPass.strength,
+    filmIntensity: filmPass.uniforms.intensity.value,
   };
 }
 

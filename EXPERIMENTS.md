@@ -65,3 +65,10 @@
 - Set mobile/tablet interaction bloom equal to idle bloom so the image no longer changes grade between motion and rest.
 - Reduced mobile/tablet bloom strength and raised threshold further, then restored constellation color through particle opacity and baked dust saturation.
 - Kept foreground particle opacity lower than background opacity to protect against near-camera flare.
+
+## 2026-05-28 Mobile screenshot QA v36
+
+- Captured Edge headless mobile screenshots at 390x844 before scroll, during touch scroll, and after touch scroll.
+- Confirmed the page uses the mobile profile, canvas renders at 780x1688, 12 baked jellyfish are active, and there are no console errors.
+- Found FilmPass still changed during interaction even after bloom/DPR were stabilized.
+- Added `stableInteractionGrade` for mobile/tablet so postprocessing values remain unchanged during scroll.
