@@ -33,7 +33,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 12;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'mobile-quality-v34';
+const ASSET_VERSION = 'mobile-quality-v35';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -49,17 +49,17 @@ function getDeviceProfile() {
       antialias: true,
       pixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
       composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.82),
-      bloomStrength: 0.055,
-      bloomRadius: 0.18,
-      bloomThreshold: 0.94,
+      bloomStrength: 0.038,
+      bloomRadius: 0.15,
+      bloomThreshold: 0.955,
       filmIntensity: 0.18,
       interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
       interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.82),
-      interactionBloomStrength: 0,
+      interactionBloomStrength: 0.038,
       interactionFilmIntensity: 0.16,
       particleScale: 0.72,
-      particleOpacity: 0.46,
-      foregroundParticleOpacity: 0.22,
+      particleOpacity: 0.68,
+      foregroundParticleOpacity: 0.16,
       foregroundParticleSize: 0.78,
       textureScale: 1,
     };
@@ -70,17 +70,17 @@ function getDeviceProfile() {
       antialias: true,
       pixelRatio: Math.min(window.devicePixelRatio || 1, 1.92),
       composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.78),
-      bloomStrength: 0.065,
-      bloomRadius: 0.19,
-      bloomThreshold: 0.925,
+      bloomStrength: 0.048,
+      bloomRadius: 0.16,
+      bloomThreshold: 0.945,
       filmIntensity: 0.205,
       interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.92),
       interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.78),
-      interactionBloomStrength: 0.018,
+      interactionBloomStrength: 0.048,
       interactionFilmIntensity: 0.18,
       particleScale: 0.86,
-      particleOpacity: 0.58,
-      foregroundParticleOpacity: 0.30,
+      particleOpacity: 0.76,
+      foregroundParticleOpacity: 0.20,
       foregroundParticleSize: 0.86,
       textureScale: 1,
     };
@@ -2662,7 +2662,7 @@ function toDisplayMaterial(label, source) {
     const isReferenceRibbon = /reference_depth_ribbon|reference_ribbon|milky_way_ribbon/.test(label);
     const mobileSpaceDust = isSpaceDust && qualityProfile.name !== 'desktop';
     if (isSpaceDust) {
-      displayColor.offsetHSL(0.0, mobileSpaceDust ? 0.08 : 0.22, mobileSpaceDust ? -0.08 : 0.04);
+      displayColor.offsetHSL(0.0, mobileSpaceDust ? 0.18 : 0.22, mobileSpaceDust ? -0.015 : 0.04);
     }
     const material = new THREE.MeshBasicMaterial({
       name: source.name,
@@ -2670,7 +2670,7 @@ function toDisplayMaterial(label, source) {
       color: displayColor,
       transparent: true,
       opacity: mobileSpaceDust
-        ? (isReferenceParticle ? 0.16 : isReferenceRibbon ? 0.035 : 0.055)
+        ? (isReferenceParticle ? 0.26 : isReferenceRibbon ? 0.055 : 0.085)
         : (isReferenceParticle ? 0.58 : isReferenceRibbon ? 0.10 : isSpaceDust ? 0.14 : 0.72),
       blending: mobileSpaceDust ? THREE.NormalBlending : isSpaceDust ? THREE.AdditiveBlending : THREE.NormalBlending,
       depthWrite: false,

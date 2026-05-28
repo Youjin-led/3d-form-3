@@ -53,3 +53,9 @@
 - Mobile scroll/touch interaction disables bloom instead of only reducing it.
 - Generated starfield, cluster, and nebula layers use normal alpha blending on mobile/tablet; desktop keeps additive glow.
 - Baked GLB star/dust/milky materials are also softened on mobile/tablet with normal blending, lower opacity, and explicit depth testing.
+
+## Stable mobile glow v35
+
+- Mobile/tablet bloom strength is now stable during and after scroll, avoiding the visible color/glow jump when interaction ends.
+- Constellation color is restored through stronger mobile particle opacity and baked dust saturation instead of additive blending.
+- Foreground near-camera particles stay heavily capped, so the color return does not reintroduce full-screen white flares.

@@ -58,3 +58,10 @@
 - Found baked `star/dust/milky` scene materials still used additive blending and high opacity after material conversion.
 - Switched mobile/tablet generated particles and baked space-dust materials to normal blending.
 - Set mobile interaction bloom to 0 and tablet interaction bloom to 0.018 to prevent scroll movement from amplifying near-camera bright layers.
+
+## 2026-05-28 Stable mobile glow v35
+
+- Phone testing showed v34 removed too much color during scroll and made glow pop back when scrolling stopped.
+- Set mobile/tablet interaction bloom equal to idle bloom so the image no longer changes grade between motion and rest.
+- Reduced mobile/tablet bloom strength and raised threshold further, then restored constellation color through particle opacity and baked dust saturation.
+- Kept foreground particle opacity lower than background opacity to protect against near-camera flare.
