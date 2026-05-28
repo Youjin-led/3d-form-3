@@ -33,7 +33,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 12;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'mobile-overscroll-v41';
+const ASSET_VERSION = 'mobile-direct-render-v42';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -49,23 +49,24 @@ function getDeviceProfile() {
       antialias: true,
       pixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
       composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.82),
-      bloomStrength: 0.038,
+      bloomStrength: 0,
       bloomRadius: 0.15,
       bloomThreshold: 0.955,
-      filmIntensity: 0.18,
+      filmIntensity: 0,
       interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
       interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.82),
-      interactionBloomStrength: 0.038,
-      interactionFilmIntensity: 0.18,
+      interactionBloomStrength: 0,
+      interactionFilmIntensity: 0,
       particleScale: 0.72,
       particleOpacity: 0.68,
       foregroundParticleOpacity: 0.16,
       foregroundParticleSize: 0.78,
       stableInteractionGrade: true,
-      lightScale: 0.66,
+      lightScale: 0.46,
       jellyfishHighlightLimit: true,
       foregroundParticleLayers: false,
       proceduralPointClouds: false,
+      usePostprocessing: false,
       textureScale: 1,
     };
   }
@@ -75,23 +76,24 @@ function getDeviceProfile() {
       antialias: true,
       pixelRatio: Math.min(window.devicePixelRatio || 1, 1.92),
       composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.78),
-      bloomStrength: 0.048,
+      bloomStrength: 0,
       bloomRadius: 0.16,
       bloomThreshold: 0.945,
-      filmIntensity: 0.205,
+      filmIntensity: 0,
       interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.92),
       interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.78),
-      interactionBloomStrength: 0.048,
-      interactionFilmIntensity: 0.205,
+      interactionBloomStrength: 0,
+      interactionFilmIntensity: 0,
       particleScale: 0.86,
       particleOpacity: 0.76,
       foregroundParticleOpacity: 0.20,
       foregroundParticleSize: 0.86,
       stableInteractionGrade: true,
-      lightScale: 0.78,
+      lightScale: 0.58,
       jellyfishHighlightLimit: true,
       foregroundParticleLayers: false,
       proceduralPointClouds: false,
+      usePostprocessing: false,
       textureScale: 1,
     };
   }
@@ -117,6 +119,7 @@ function getDeviceProfile() {
     jellyfishHighlightLimit: false,
     foregroundParticleLayers: true,
     proceduralPointClouds: true,
+    usePostprocessing: true,
     textureScale: 1,
   };
 }
@@ -134,6 +137,7 @@ function publishQualityProfile() {
     jellyfishHighlightLimit: profile.jellyfishHighlightLimit,
     foregroundParticleLayers: profile.foregroundParticleLayers,
     proceduralPointClouds: profile.proceduralPointClouds,
+    usePostprocessing: profile.usePostprocessing,
   };
   return profile;
 }
@@ -801,6 +805,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.54;
+renderer.setClearColor(0x010607, 1);
 stage.appendChild(renderer.domElement);
 renderer.domElement.style.cursor = 'default';
 renderer.domElement.style.touchAction = 'none';
@@ -841,9 +846,11 @@ function applyRenderQuality(interactionActive) {
   renderer.setPixelRatio(pixelRatio);
   composer.setPixelRatio(composerPixelRatio);
   bloomPass.strength = useInteractionGrade ? qualityProfile.interactionBloomStrength : qualityProfile.bloomStrength;
+  bloomPass.enabled = qualityProfile.usePostprocessing && bloomPass.strength > 0;
   bloomPass.radius = qualityProfile.bloomRadius;
   bloomPass.threshold = qualityProfile.bloomThreshold;
   filmPass.uniforms.intensity.value = useInteractionGrade ? qualityProfile.interactionFilmIntensity : qualityProfile.filmIntensity;
+  filmPass.enabled = qualityProfile.usePostprocessing && filmPass.uniforms.intensity.value > 0;
   window.__RENDER_QUALITY_STATE = {
     profile: qualityProfile.name,
     interactionActive,
@@ -853,6 +860,7 @@ function applyRenderQuality(interactionActive) {
     composerPixelRatio,
     bloomStrength: bloomPass.strength,
     filmIntensity: filmPass.uniforms.intensity.value,
+    usePostprocessing: qualityProfile.usePostprocessing,
   };
 }
 
@@ -3015,7 +3023,11 @@ function animate() {
     camera.lookAt(cardRail.currentTarget);
   }
   updateReadableCardText();
-  composer.render();
+  if (qualityProfile.usePostprocessing) {
+    composer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
 }
 
 function startAnimationLoop() {

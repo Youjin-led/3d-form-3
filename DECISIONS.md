@@ -95,3 +95,10 @@
 - The full-screen white flash is treated as a native mobile overscroll/viewport repaint issue, not as a white object in the 3D scene.
 - The page, stage, and canvas are fixed to the viewport and disable browser overscroll.
 - Canvas touch movement now explicitly prevents native scrolling while the existing custom rail swipe remains in control.
+
+## Mobile direct render v42
+
+- Mobile/tablet now bypass `EffectComposer`, bloom, and film entirely during rendering.
+- This removes render-target resize/bloom amplification as a possible source of full-screen white flashes while swiping.
+- Mobile/tablet point lights are reduced further so moving jellyfish cannot cross a hot light zone and wash out a large part of the frame.
+- Desktop keeps the postprocessing stack.

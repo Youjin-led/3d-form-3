@@ -102,3 +102,10 @@
 - User clarified the visible bug is a full-screen white flash, not white jellyfish hoods or individual bright points.
 - Found the app still allowed native vertical touch panning through `touch-action: pan-y`, while the scene also uses swipe gestures for rail movement.
 - Locked the viewport/page/canvas against native overscroll and added a non-passive canvas `touchmove` guard to prevent browser repaint flashes during scene swipes.
+
+## 2026-05-28 Mobile direct render v42
+
+- User reported the overscroll lock did not remove the full-screen flash.
+- Treated the remaining suspect as mobile postprocessing: `EffectComposer` render targets, bloom, film, and resize while swiping.
+- Disabled mobile/tablet postprocessing and render directly with the WebGL renderer; desktop still uses composer/bloom/film.
+- Reduced mobile/tablet point-light scale after user clarified the flash can happen in static animation when jellyfish pass a hot scene point.
