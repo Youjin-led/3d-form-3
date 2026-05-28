@@ -33,7 +33,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 12;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'mobile-quality-v36';
+const ASSET_VERSION = 'mobile-overscroll-v41';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -62,6 +62,10 @@ function getDeviceProfile() {
       foregroundParticleOpacity: 0.16,
       foregroundParticleSize: 0.78,
       stableInteractionGrade: true,
+      lightScale: 0.66,
+      jellyfishHighlightLimit: true,
+      foregroundParticleLayers: false,
+      proceduralPointClouds: false,
       textureScale: 1,
     };
   }
@@ -84,6 +88,10 @@ function getDeviceProfile() {
       foregroundParticleOpacity: 0.20,
       foregroundParticleSize: 0.86,
       stableInteractionGrade: true,
+      lightScale: 0.78,
+      jellyfishHighlightLimit: true,
+      foregroundParticleLayers: false,
+      proceduralPointClouds: false,
       textureScale: 1,
     };
   }
@@ -105,6 +113,10 @@ function getDeviceProfile() {
     foregroundParticleOpacity: 1,
     foregroundParticleSize: 1,
     stableInteractionGrade: false,
+    lightScale: 1,
+    jellyfishHighlightLimit: false,
+    foregroundParticleLayers: true,
+    proceduralPointClouds: true,
     textureScale: 1,
   };
 }
@@ -118,6 +130,10 @@ function publishQualityProfile() {
     composerPixelRatio: profile.composerPixelRatio,
     particleScale: profile.particleScale,
     stableInteractionGrade: profile.stableInteractionGrade,
+    lightScale: profile.lightScale,
+    jellyfishHighlightLimit: profile.jellyfishHighlightLimit,
+    foregroundParticleLayers: profile.foregroundParticleLayers,
+    proceduralPointClouds: profile.proceduralPointClouds,
   };
   return profile;
 }
@@ -787,6 +803,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.54;
 stage.appendChild(renderer.domElement);
 renderer.domElement.style.cursor = 'default';
+renderer.domElement.style.touchAction = 'none';
 
 const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
@@ -1052,15 +1069,34 @@ function registerBlenderJellyfishAnimations(model, animations = []) {
 
 function makeBakedJellyfishMaterial(index) {
   const palette = [
-    { color: 0x13272d, emissive: 0x000000 },
-    { color: 0x201b33, emissive: 0x000000 },
-    { color: 0x2a1c29, emissive: 0x000000 },
-    { color: 0x162b28, emissive: 0x000000 }
+    { color: 0x13272d, emissive: 0x06161d },
+    { color: 0x201b33, emissive: 0x13081d },
+    { color: 0x2a1c29, emissive: 0x180913 },
+    { color: 0x162b28, emissive: 0x071912 }
   ];
   const tint = palette[index % palette.length];
+  if (qualityProfile.jellyfishHighlightLimit) {
+    const material = new THREE.MeshStandardMaterial({
+      color: tint.color,
+      emissive: tint.emissive,
+      emissiveIntensity: 0.18,
+      metalness: 0.04,
+      roughness: 0.86,
+      transparent: false,
+      opacity: 1,
+      side: THREE.DoubleSide,
+      depthWrite: true,
+      depthTest: true,
+      blending: THREE.NormalBlending,
+      toneMapped: true
+    });
+    material.envMapIntensity = 0;
+    material.userData.baseDepthTest = material.depthTest;
+    return material;
+  }
   const material = new THREE.MeshPhysicalMaterial({
     color: tint.color,
-    emissive: tint.emissive,
+    emissive: 0x000000,
     emissiveIntensity: 0,
     metalness: 0.36,
     roughness: 0.54,
@@ -1852,6 +1888,11 @@ jellyModal?.addEventListener('click', (event) => {
 });
 
 renderer.domElement.addEventListener('click', handleSceneClick, { passive: true });
+renderer.domElement.addEventListener('touchmove', (event) => {
+  if (event.cancelable) {
+    event.preventDefault();
+  }
+}, { passive: false });
 
 window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
@@ -2067,6 +2108,9 @@ function addStarField() {
   const particleBlending = qualityProfile.name === 'desktop' ? THREE.AdditiveBlending : THREE.NormalBlending;
 
   function pointsLayer(count, radiusMin, radiusMax, size, opacity) {
+    if (!qualityProfile.proceduralPointClouds) {
+      return null;
+    }
     const positions = [];
     const colors = [];
     const palette = [
@@ -2111,6 +2155,9 @@ function addStarField() {
   pointsLayer(particleCount(24), 13.0, 24.0, 1.0, particleOpacity(0.035));
 
   function centralDust(count, height, radius, turns, size, opacity, yOffset = 0) {
+    if (!qualityProfile.proceduralPointClouds) {
+      return;
+    }
     const positions = [];
     const colors = [];
     const palette = [
@@ -2156,6 +2203,12 @@ function addStarField() {
   }
 
   function dustCloud(count, center, spread, size, opacity, palette, drift = [0, 0, 0], foreground = false) {
+    if (!qualityProfile.proceduralPointClouds) {
+      return;
+    }
+    if (foreground && !qualityProfile.foregroundParticleLayers) {
+      return;
+    }
     const positions = [];
     const colors = [];
     for (let i = 0; i < count; i++) {
@@ -2189,6 +2242,12 @@ function addStarField() {
   }
 
   function verticalStream(count, x, z, yMin, yMax, width, size, opacity, palette, foreground = false) {
+    if (!qualityProfile.proceduralPointClouds) {
+      return;
+    }
+    if (foreground && !qualityProfile.foregroundParticleLayers) {
+      return;
+    }
     const positions = [];
     const colors = [];
     for (let i = 0; i < count; i++) {
@@ -2255,6 +2314,10 @@ function addStarField() {
   verticalStream(particleCount(640), 3.8, -1.4, -5.4, 6.2, 0.68, 3.7, particleOpacity(0.40), deepGreen);
   verticalStream(particleCount(420), 0.25, 4.4, -4.4, 5.6, 1.2, foregroundSize(2.6), foregroundOpacity(0.18), violetTeal, true);
 
+  if (!qualityProfile.proceduralPointClouds) {
+    return;
+  }
+
   const clusterTexA = makeParticleClusterTexture('rgba(40,230,255,ALPHA)', 'rgba(206,68,255,ALPHA)', 'rgba(50,255,168,ALPHA)');
   const clusterTexB = makeParticleClusterTexture('rgba(50,255,156,ALPHA)', 'rgba(54,96,255,ALPHA)', 'rgba(255,150,78,ALPHA)');
   const clusterTexC = makeParticleClusterTexture('rgba(155,86,255,ALPHA)', 'rgba(39,219,255,ALPHA)', 'rgba(255,82,178,ALPHA)');
@@ -2266,6 +2329,9 @@ function addStarField() {
     { tex: clusterTexB, pos: [0.2, 6.4, 3.6], rot: [0.02, 0.02, 0.02], scale: [6.4, 2.3, 1], opacity: 0.40, order: 4 },
     { tex: clusterTexC, pos: [1.9, 5.8, 4.8], rot: [0.06, -0.18, 0.36], scale: [3.8, 3.0, 1], opacity: 0.30, order: 7 }
   ].forEach((cluster) => {
+    if (cluster.order >= 7 && !qualityProfile.foregroundParticleLayers) {
+      return;
+    }
     const material = new THREE.MeshBasicMaterial({
       map: cluster.tex,
       transparent: true,
@@ -2930,11 +2996,12 @@ function animate() {
   shaderClock.value = elapsed;
   updateRenderQualityForInteraction();
   updateSceneAnimationMixers(delta);
-  cyanLight.intensity = 5.2 + Math.sin(elapsed * 0.7) * 0.4;
-  magentaLight.intensity = 5.0 + Math.cos(elapsed * 0.58) * 0.45;
-  violetLight.intensity = 5.0 + Math.sin(elapsed * 0.43) * 0.35;
-  spineMagenta.intensity = 5.8 + Math.sin(elapsed * 0.9) * 0.6;
-  spineBlue.intensity = 5.2 + Math.cos(elapsed * 0.72) * 0.5;
+  const lightScale = qualityProfile.lightScale;
+  cyanLight.intensity = (5.2 + Math.sin(elapsed * 0.7) * 0.4) * lightScale;
+  magentaLight.intensity = (5.0 + Math.cos(elapsed * 0.58) * 0.45) * lightScale;
+  violetLight.intensity = (5.0 + Math.sin(elapsed * 0.43) * 0.35) * lightScale;
+  spineMagenta.intensity = (5.8 + Math.sin(elapsed * 0.9) * 0.6) * lightScale;
+  spineBlue.intensity = (5.2 + Math.cos(elapsed * 0.72) * 0.5) * lightScale;
   updateFloatingCards(elapsed);
   if (cardRail.ready) {
     cardRail.currentPosition.lerp(cardRail.targetPosition, 0.065);

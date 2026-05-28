@@ -72,3 +72,33 @@
 - Confirmed the page uses the mobile profile, canvas renders at 780x1688, 12 baked jellyfish are active, and there are no console errors.
 - Found FilmPass still changed during interaction even after bloom/DPR were stabilized.
 - Added `stableInteractionGrade` for mobile/tablet so postprocessing values remain unchanged during scroll.
+
+## 2026-05-28 Mobile jellyfish highlight clamp v37
+
+- Multi-scroll screenshots showed the remaining flare was from close jellyfish surfaces, not from global bloom or starfield changes.
+- Added mobile/tablet `jellyfishHighlightLimit` to switch baked jellyfish from the desktop physical material to a matte standard material.
+- Added mobile/tablet `lightScale` to reduce point-light peaks while preserving color through a low emissive tint.
+
+## 2026-05-28 Mobile foreground particle removal v38
+
+- Follow-up screenshots showed the bright silhouettes were generated `foreground` point-cloud layers, not the 12 active baked jellyfish.
+- Disabled foreground `dustCloud`, foreground `verticalStream`, and order-7 particle clusters on mobile/tablet.
+- Kept background particle layers enabled so the scene stays colorful without white foreground flare.
+
+## 2026-05-28 Mobile procedural point cloud removal v39
+
+- v38 screenshots still showed white jellyfish-like silhouettes, so the source was broader than foreground-only layers.
+- Disabled generated `pointsLayer`, `centralDust`, `dustCloud`, and `verticalStream` on mobile/tablet.
+- Kept non-Points color planes and GLB particles to preserve the colored constellation look without procedural white flare.
+
+## 2026-05-28 Mobile procedural plane removal v40
+
+- Compared mobile screenshots while hiding GLB `milky/deep_space/star/dust` layers and found the white silhouettes stayed visible.
+- Hiding model layers did not remove them because the culprit was unnamed generated cluster/nebula plane meshes from `addStarField()`.
+- Added an early mobile/tablet return before those textured planes are created, while leaving desktop unchanged.
+
+## 2026-05-28 Mobile overscroll lock v41
+
+- User clarified the visible bug is a full-screen white flash, not white jellyfish hoods or individual bright points.
+- Found the app still allowed native vertical touch panning through `touch-action: pan-y`, while the scene also uses swipe gestures for rail movement.
+- Locked the viewport/page/canvas against native overscroll and added a non-passive canvas `touchmove` guard to prevent browser repaint flashes during scene swipes.

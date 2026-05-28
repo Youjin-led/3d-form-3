@@ -65,3 +65,33 @@
 - Mobile/tablet no longer switch any visual render grade during scroll: DPR, composer DPR, bloom, and film stay identical between idle and interaction.
 - `interactionActive` is still tracked for animation cadence and diagnostics, but `stableInteractionGrade` prevents postprocessing changes on mobile/tablet.
 - Render diagnostics now expose whether interaction grade is actually used, plus current bloom and film values for screenshot QA.
+
+## Mobile jellyfish highlight clamp v37
+
+- Mobile/tablet baked jellyfish use a matte `MeshStandardMaterial` instead of the desktop physical material, preventing close camera angles from turning bell surfaces white.
+- Mobile/tablet scene light intensities are scaled down while jellyfish keep a small cyan/magenta emissive tint, so color remains without flare.
+- Desktop keeps the physical jellyfish material and full light intensity.
+
+## Mobile foreground particle removal v38
+
+- Mobile/tablet no longer render generated foreground particle layers because they read as white jellyfish silhouettes and caused perceived flare.
+- Background constellation, dust, nebula, and the 12 active baked jellyfish remain visible and colored.
+- Desktop keeps the foreground particle layers for depth and atmosphere.
+
+## Mobile procedural point cloud removal v39
+
+- Mobile/tablet now skip all generated `Points` clouds, not only foreground clouds, because overlapping point clouds could still form bright white jellyfish-like silhouettes.
+- GLB star/dust meshes, color cluster planes, nebula planes, and the 12 active baked jellyfish remain active on mobile/tablet.
+- Desktop keeps the generated point clouds.
+
+## Mobile procedural plane removal v40
+
+- Mobile/tablet now also skip generated cluster and nebula planes after the point-cloud calls.
+- The remaining mobile atmosphere comes from the baked GLB scene particles, which do not cross the camera as large white textured planes.
+- Desktop keeps the full generated starfield, cluster planes, and nebula planes.
+
+## Mobile overscroll lock v41
+
+- The full-screen white flash is treated as a native mobile overscroll/viewport repaint issue, not as a white object in the 3D scene.
+- The page, stage, and canvas are fixed to the viewport and disable browser overscroll.
+- Canvas touch movement now explicitly prevents native scrolling while the existing custom rail swipe remains in control.
