@@ -33,7 +33,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 12;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'mobile-quality-v32';
+const ASSET_VERSION = 'mobile-quality-v33';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -47,18 +47,20 @@ function getDeviceProfile() {
     return {
       name: 'mobile',
       antialias: true,
-      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.68),
-      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.52),
-      bloomStrength: 0.088,
-      bloomRadius: 0.235,
-      bloomThreshold: 0.875,
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
+      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.82),
+      bloomStrength: 0.078,
+      bloomRadius: 0.21,
+      bloomThreshold: 0.91,
       filmIntensity: 0.18,
-      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.34),
-      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.18),
-      interactionBloomStrength: 0.072,
-      interactionFilmIntensity: 0.135,
-      particleScale: 0.90,
-      particleOpacity: 1,
+      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 2.0),
+      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.82),
+      interactionBloomStrength: 0.070,
+      interactionFilmIntensity: 0.16,
+      particleScale: 0.72,
+      particleOpacity: 0.72,
+      foregroundParticleOpacity: 0.42,
+      foregroundParticleSize: 0.78,
       textureScale: 1,
     };
   }
@@ -66,18 +68,20 @@ function getDeviceProfile() {
     return {
       name: 'tablet',
       antialias: true,
-      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.72),
-      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.58),
-      bloomStrength: 0.092,
-      bloomRadius: 0.245,
-      bloomThreshold: 0.872,
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.92),
+      composerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.78),
+      bloomStrength: 0.084,
+      bloomRadius: 0.225,
+      bloomThreshold: 0.90,
       filmIntensity: 0.205,
-      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.42),
-      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.26),
+      interactionPixelRatio: Math.min(window.devicePixelRatio || 1, 1.92),
+      interactionComposerPixelRatio: Math.min(window.devicePixelRatio || 1, 1.78),
       interactionBloomStrength: 0.076,
-      interactionFilmIntensity: 0.155,
-      particleScale: 1,
-      particleOpacity: 0.98,
+      interactionFilmIntensity: 0.18,
+      particleScale: 0.86,
+      particleOpacity: 0.82,
+      foregroundParticleOpacity: 0.52,
+      foregroundParticleSize: 0.86,
       textureScale: 1,
     };
   }
@@ -96,6 +100,8 @@ function getDeviceProfile() {
     interactionFilmIntensity: 0.14,
     particleScale: 1,
     particleOpacity: 1,
+    foregroundParticleOpacity: 1,
+    foregroundParticleSize: 1,
     textureScale: 1,
   };
 }
@@ -2047,6 +2053,8 @@ function addStarField() {
   const dust = makeDustTexture();
   const particleCount = (count) => Math.max(8, Math.round(count * qualityProfile.particleScale));
   const particleOpacity = (opacity) => opacity * qualityProfile.particleOpacity;
+  const foregroundOpacity = (opacity) => opacity * qualityProfile.particleOpacity * qualityProfile.foregroundParticleOpacity;
+  const foregroundSize = (size) => size * qualityProfile.foregroundParticleSize;
 
   function pointsLayer(count, radiusMin, radiusMax, size, opacity) {
     const positions = [];
@@ -2162,7 +2170,7 @@ function addStarField() {
       opacity,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      depthTest: !foreground,
+      depthTest: true,
       sizeAttenuation: false
     });
     const points = new THREE.Points(geometry, material);
@@ -2198,7 +2206,7 @@ function addStarField() {
       opacity,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      depthTest: !foreground,
+      depthTest: true,
       sizeAttenuation: false
     });
     const points = new THREE.Points(geometry, material);
@@ -2228,14 +2236,14 @@ function addStarField() {
   dustCloud(particleCount(760), [-2.6, -3.1, 1.9], [2.2, 4.0, 1.6], 5.0, particleOpacity(0.40), deepGreen, [0.20, 0, 0]);
   dustCloud(particleCount(700), [3.1, -2.7, 1.6], [2.1, 3.8, 1.5], 5.5, particleOpacity(0.42), deepGreen, [-0.18, 0, 0]);
   dustCloud(particleCount(880), [0.4, 6.25, 2.4], [5.2, 1.8, 1.8], 4.4, particleOpacity(0.48), violetTeal);
-  dustCloud(particleCount(680), [-1.0, 1.2, 4.6], [5.8, 8.4, 0.7], 2.9, particleOpacity(0.22), violetTeal, [0.05, 0, 0], true);
-  dustCloud(particleCount(520), [3.1, -0.8, 4.2], [3.4, 6.4, 0.6], 3.2, particleOpacity(0.25), deepGreen, [-0.10, 0, 0], true);
+  dustCloud(particleCount(680), [-1.0, 1.2, 4.6], [5.8, 8.4, 0.7], foregroundSize(2.9), foregroundOpacity(0.22), violetTeal, [0.05, 0, 0], true);
+  dustCloud(particleCount(520), [3.1, -0.8, 4.2], [3.4, 6.4, 0.6], foregroundSize(3.2), foregroundOpacity(0.25), deepGreen, [-0.10, 0, 0], true);
   dustCloud(particleCount(760), [4.9, 5.2, 0.8], [3.8, 3.2, 1.2], 4.8, particleOpacity(0.54), violetTeal, [-0.22, 0, 0]);
   dustCloud(particleCount(560), [-4.6, 5.7, 1.8], [3.0, 2.8, 1.1], 4.2, particleOpacity(0.42), violetTeal, [0.16, 0, 0]);
-  dustCloud(particleCount(520), [5.2, -0.1, 2.8], [2.2, 5.2, 0.9], 4.1, particleOpacity(0.36), deepGreen, [-0.12, 0, 0], true);
+  dustCloud(particleCount(520), [5.2, -0.1, 2.8], [2.2, 5.2, 0.9], foregroundSize(4.1), foregroundOpacity(0.36), deepGreen, [-0.12, 0, 0], true);
   verticalStream(particleCount(720), -3.8, 1.0, -5.7, 6.6, 0.72, 3.9, particleOpacity(0.44), violetTeal);
   verticalStream(particleCount(640), 3.8, -1.4, -5.4, 6.2, 0.68, 3.7, particleOpacity(0.40), deepGreen);
-  verticalStream(particleCount(420), 0.25, 4.4, -4.4, 5.6, 1.2, 2.6, particleOpacity(0.18), violetTeal, true);
+  verticalStream(particleCount(420), 0.25, 4.4, -4.4, 5.6, 1.2, foregroundSize(2.6), foregroundOpacity(0.18), violetTeal, true);
 
   const clusterTexA = makeParticleClusterTexture('rgba(40,230,255,ALPHA)', 'rgba(206,68,255,ALPHA)', 'rgba(50,255,168,ALPHA)');
   const clusterTexB = makeParticleClusterTexture('rgba(50,255,156,ALPHA)', 'rgba(54,96,255,ALPHA)', 'rgba(255,150,78,ALPHA)');
@@ -2251,10 +2259,10 @@ function addStarField() {
     const material = new THREE.MeshBasicMaterial({
       map: cluster.tex,
       transparent: true,
-      opacity: cluster.opacity,
+      opacity: cluster.order >= 7 ? foregroundOpacity(cluster.opacity) : particleOpacity(cluster.opacity),
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      depthTest: cluster.order < 7,
+      depthTest: true,
       side: THREE.DoubleSide
     });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
@@ -2276,9 +2284,10 @@ function addStarField() {
     const material = new THREE.MeshBasicMaterial({
       map: cloud.tex,
       transparent: true,
-      opacity: cloud.opacity,
+      opacity: cloud.opacity * qualityProfile.particleOpacity,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      depthTest: true,
       side: THREE.DoubleSide
     });
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);

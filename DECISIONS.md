@@ -41,3 +41,9 @@
 - Active jellyfish count is capped at 12 across layout, click proxies, animation mixers, and rail navigation.
 - The three removed tail items are hidden before replacement with the baked jellyfish mesh, so they do not spend mobile render or interaction budget.
 - Mobile and tablet DPR/composer caps were raised again, with slightly stronger contrast/saturation and a lighter mobile grade overlay.
+
+## Mobile quality v33
+
+- Mobile/tablet interaction no longer drops renderer or composer DPR, so jellyfish stay sharp while scrolling.
+- Mobile/tablet renderer DPR caps were raised again and paid for by reducing background particle density/opacity.
+- Foreground additive dust and nebula layers now keep depth testing enabled and use lower mobile opacity/size to avoid full-screen flare when the camera crosses them.

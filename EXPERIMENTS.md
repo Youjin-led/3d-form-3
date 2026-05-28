@@ -43,3 +43,11 @@
 - Raised tablet renderer DPR cap to 1.72 and composer DPR cap to 1.58.
 - Limited active jellyfish/cards from 15 to 12 before baked mesh replacement, click proxy creation, and rail stop generation.
 - Increased mobile/tablet canvas contrast and saturation while reducing the mobile grade overlay opacity.
+
+## 2026-05-28 Mobile jellyfish sharpness and flare guard
+
+- Raised mobile renderer DPR cap to 2.0 and composer DPR cap to 1.82.
+- Raised tablet renderer DPR cap to 1.92 and composer DPR cap to 1.78.
+- Kept mobile/tablet DPR stable during scroll/touch interaction instead of lowering render resolution.
+- Lowered mobile/tablet particle budgets and foreground additive opacity to reserve frame budget for the jellyfish.
+- Enabled depth testing on foreground dust, cluster, and nebula layers so bright particles cannot draw through the whole scene when close to the camera.
