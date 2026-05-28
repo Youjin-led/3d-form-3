@@ -1,4 +1,4 @@
-﻿import * as THREE from 'three';
+import * as THREE from 'three';
 import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
 import { DRACOLoader } from './vendor/loaders/DRACOLoader.js';
 import { OrbitControls } from './vendor/controls/OrbitControls.js';
@@ -32,7 +32,7 @@ const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'jelly-click-focus-v27';
+const ASSET_VERSION = 'jelly-click-only-v30';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -113,6 +113,7 @@ function getResponsiveSettings() {
   const portrait = height > width;
   if (width <= 640) {
     return {
+      portrait,
       viewHeight: portrait ? 17.2 : 13.4,
       cardTargetWidth: PUBLISHED_CARD_TARGET_WIDTH * 0.78,
       cardDistanceOffset: 2.55,
@@ -125,6 +126,7 @@ function getResponsiveSettings() {
   }
   if (width <= 1024) {
     return {
+      portrait,
       viewHeight: portrait ? 14.8 : 12.8,
       cardTargetWidth: PUBLISHED_CARD_TARGET_WIDTH * 0.9,
       cardDistanceOffset: 3.0,
@@ -136,6 +138,7 @@ function getResponsiveSettings() {
     };
   }
   return {
+    portrait,
     viewHeight: BASE_VIEW_HEIGHT,
     cardTargetWidth: PUBLISHED_CARD_TARGET_WIDTH,
     cardDistanceOffset: PUBLISHED_CARD_DISTANCE_OFFSET,
@@ -772,10 +775,8 @@ renderer.domElement.style.cursor = 'default';
 
 const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
-let pointerInsideScene = false;
-let hoveredCardIndex = null;
+const pointerHitWorldPosition = new THREE.Vector3();
 let focusedCardIndex = null;
-let pointerNeedsRaycast = false;
 const pointerScreen = { x: 0, y: 0 };
 
 const composer = new EffectComposer(renderer);
@@ -823,13 +824,13 @@ function markInteraction(duration = 700) {
 }
 
 function updateRenderQualityForInteraction() {
-  const hoverActive = cardBodies.some((body) => body.hoverAmount > 0.015 || body.hoverTarget === 1);
+  const focusActive = cardBodies.some((body) => body.focusAmount > 0.015 || body.focusTarget === 1);
   const railMoving = cardRail.ready && (
     cardRail.currentPosition.distanceToSquared(cardRail.targetPosition) > 0.0009
     || cardRail.currentTarget.distanceToSquared(cardRail.targetTarget) > 0.0009
     || Math.abs(cardRail.currentZoom - cardRail.targetZoom) > 0.002
   );
-  const interactionActive = hoverActive || railMoving || performance.now() < renderQualityState.holdUntil;
+  const interactionActive = focusActive || railMoving || performance.now() < renderQualityState.holdUntil;
   if (interactionActive !== renderQualityState.interactionActive) {
     applyRenderQuality(interactionActive);
   }
@@ -904,7 +905,7 @@ function applyPublishedCardLayout(model) {
   const cardObjectsByIndex = new Map();
   floatingCards.length = 0;
   cardBodies.length = 0;
-  cardHoverObjects.length = 0;
+  cardHitObjects.length = 0;
   model.updateMatrixWorld(true);
   model.traverse((object) => {
     const transform = transforms.get(object.name);
@@ -945,7 +946,7 @@ function applyPublishedCardLayout(model) {
         baseRenderOrder: object.renderOrder,
         phase: index * 0.73 + (match[2] === 'edge' ? 0.04 : 0)
       });
-      cardHoverObjects.push(object);
+      cardHitObjects.push(object);
     }
   });
 
@@ -970,7 +971,7 @@ function applyPublishedCardLayout(model) {
   cardObjectsByIndex.forEach((objects, index) => {
     const image = objects.find((object) => /_image$/i.test(object.name)) || objects[0];
     if (!image) return;
-    cardBodies.push({
+    const body = {
       index,
       objects,
       basePosition: image.position.clone(),
@@ -978,9 +979,11 @@ function applyPublishedCardLayout(model) {
       collisionVelocity: new THREE.Vector3(),
       targetPosition: image.position.clone(),
       radius: 2.42,
-      hoverAmount: 0,
-      hoverTarget: 0
-    });
+      focusAmount: 0,
+      focusTarget: 0
+    };
+    cardBodies.push(body);
+    cardBodyByIndex.set(index, body);
   });
 
   model.updateMatrixWorld(true);
@@ -1125,15 +1128,15 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
         depthTest: false
       })
     );
-    hitProxy.name = `${object.name}_hover_proxy`;
-    hitProxy.userData.hoverIndex = index;
-    hitProxy.userData.hoverSource = object;
+    hitProxy.name = `${object.name}_click_hit_proxy`;
+    hitProxy.userData.hitIndex = index;
+    hitProxy.userData.hitSource = object;
     hitProxy.frustumCulled = false;
     hitProxy.position.copy(object.position);
-    hitProxy.scale.setScalar(Math.max(object.userData.baseVisualHeight * 0.62, 2.25));
+    hitProxy.scale.setScalar(Math.max(object.userData.baseVisualHeight * 0.22, 0.86));
     scene.add(hitProxy);
-    object.userData.hoverProxy = hitProxy;
-    cardHoverObjects.push(hitProxy);
+    object.userData.hitProxy = hitProxy;
+    cardHitObjects.push(hitProxy);
 
     const mixer = new THREE.AnimationMixer(object);
     mixer.userData = { isJellyfishMixer: true, cardIndex: index, deferredDelta: 0 };
@@ -1162,7 +1165,7 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
     replaced,
     clips: clips.map((clip) => clip.name),
     sourceVertices: sourceGeometry.attributes.position?.count || 0,
-    hoverProxies: cardHoverObjects.filter((object) => object.userData.hoverIndex !== undefined).length
+    hitProxies: cardHitObjects.filter((object) => object.userData.hitIndex !== undefined).length
   };
 }
 
@@ -1177,10 +1180,9 @@ function updateJellyfishAnimationForHeight(object, index) {
   const currentWeight = object.userData.jellyfishAnimationWeight ?? 1;
   const targetWeight = topDrift ? 0 : 1;
   const nextWeight = THREE.MathUtils.lerp(currentWeight, targetWeight, topDrift ? 0.08 : 0.16);
+  if (Math.abs(nextWeight - currentWeight) < 0.001) return;
   object.userData.jellyfishAnimationWeight = nextWeight;
   actions.forEach((action) => {
-    action.enabled = true;
-    action.paused = false;
     action.setEffectiveWeight(nextWeight);
   });
 }
@@ -1246,7 +1248,7 @@ function getJellyfishPathQuaternion(index, elapsed, basePosition, baseQuaternion
 }
 
 function getBodyForCard(index) {
-  return cardBodies.find((body) => body.index === index);
+  return cardBodyByIndex.get(index) || null;
 }
 
 function getCardRouteOffset(index, elapsed, basePosition) {
@@ -1320,74 +1322,60 @@ function keepJellyfishOrbitDistance(position) {
   return position;
 }
 
-function captureHoveredCardPose(index) {
+function captureFocusedCardPose(index) {
   floatingCards.forEach(({ object, index: cardIndex }) => {
     if (cardIndex !== index) return;
-    object.userData.hoverFreezePosition = object.position.clone();
-    object.userData.hoverFreezeQuaternion = object.quaternion.clone();
+    object.userData.focusFreezePosition = object.position.clone();
+    object.userData.focusFreezeQuaternion = object.quaternion.clone();
   });
   cardTextSprites.forEach((sprite) => {
     if ((sprite.userData.railIndex ?? 0) !== index) return;
-    sprite.userData.hoverFreezePosition = sprite.position.clone();
+    sprite.userData.focusFreezePosition = sprite.position.clone();
   });
-}
-
-function setHoveredCardIndex(index) {
-  hoveredCardIndex = index;
-  renderer.domElement.style.cursor = index === null ? 'default' : 'pointer';
-  window.__HOVERED_CARD_INDEX = hoveredCardIndex;
 }
 
 function setFocusedCardIndex(index) {
   if (index !== null && index !== focusedCardIndex) {
-    captureHoveredCardPose(index);
+    captureFocusedCardPose(index);
   }
   if (index !== focusedCardIndex) {
     markInteraction(index === null ? 520 : 1400);
   }
   focusedCardIndex = index;
   cardBodies.forEach((body) => {
-    body.hoverTarget = body.index === index ? 1 : 0;
+    body.focusTarget = body.index === index ? 1 : 0;
   });
   window.__FOCUSED_CARD_INDEX = focusedCardIndex;
 }
 
-function updateHoveredCardFromPointer() {
-  if (!pointerInsideScene || !cardHoverObjects.length) {
-    if (hoveredCardIndex !== null) setHoveredCardIndex(null);
-    return;
-  }
-  const cardHit = getPointerCardHit();
-  const nextIndex = cardHit === null ? null : cardHit.index;
-  if (nextIndex !== hoveredCardIndex) setHoveredCardIndex(nextIndex);
-}
-
 function getPointerCardHit() {
-  if (!pointerInsideScene || !cardHoverObjects.length) return null;
+  if (!cardHitObjects.length) return null;
   raycaster.setFromCamera(pointer, camera);
-  const intersections = raycaster.intersectObjects(cardHoverObjects, false);
-  const cardHits = intersections.filter((hit) => (
-    hit.object.userData.hoverIndex !== undefined
-    || /^spiral_project_card_(\d+)_(image|edge)$/i.test(hit.object.name)
-  ));
+  const intersections = raycaster.intersectObjects(cardHitObjects, false);
   const rect = renderer.domElement.getBoundingClientRect();
-  cardHits.sort((a, b) => {
-    const sourceA = a.object.userData.hoverSource || a.object;
-    const sourceB = b.object.userData.hoverSource || b.object;
-    const projectedA = sourceA.getWorldPosition(new THREE.Vector3()).project(camera);
-    const projectedB = sourceB.getWorldPosition(new THREE.Vector3()).project(camera);
-    const ax = (projectedA.x * 0.5 + 0.5) * rect.width;
-    const ay = (-projectedA.y * 0.5 + 0.5) * rect.height;
-    const bx = (projectedB.x * 0.5 + 0.5) * rect.width;
-    const by = (-projectedB.y * 0.5 + 0.5) * rect.height;
-    return Math.hypot(ax - pointerScreen.x, ay - pointerScreen.y)
-      - Math.hypot(bx - pointerScreen.x, by - pointerScreen.y);
+  let cardHit = null;
+  let bestScreenDistance = Infinity;
+  intersections.forEach((hit) => {
+    if (
+      hit.object.userData.hitIndex === undefined
+      && !/^spiral_project_card_(\d+)_(image|edge)$/i.test(hit.object.name)
+    ) {
+      return;
+    }
+    const source = hit.object.userData.hitSource || hit.object;
+    source.getWorldPosition(pointerHitWorldPosition).project(camera);
+    const screenX = (pointerHitWorldPosition.x * 0.5 + 0.5) * rect.width;
+    const screenY = (-pointerHitWorldPosition.y * 0.5 + 0.5) * rect.height;
+    const screenDistance = Math.hypot(screenX - pointerScreen.x, screenY - pointerScreen.y);
+    if (screenDistance < bestScreenDistance) {
+      bestScreenDistance = screenDistance;
+      cardHit = hit;
+    }
   });
-  const cardHit = cardHits[0] || null;
   if (!cardHit) return null;
   return {
-    index: Number(cardHit.object.userData.hoverIndex ?? cardHit.object.name.match(/^spiral_project_card_(\d+)_/i)[1]),
-    object: cardHit.object.userData.hoverSource || cardHit.object,
+    index: Number(cardHit.object.userData.hitIndex ?? cardHit.object.name.match(/^spiral_project_card_(\d+)_/i)[1]),
+    object: cardHit.object.userData.hitSource || cardHit.object,
   };
 }
 
@@ -1411,14 +1399,17 @@ function setJellyModalOpen(open, index = focusedCardIndex) {
 function handleSceneClick(event) {
   updatePointerFromEvent(event);
   const hit = getPointerCardHit();
-  if (!hit) {
+  if (focusedCardIndex !== null) {
+    if (hit?.index === focusedCardIndex) {
+      setJellyModalOpen(true, hit.index);
+      markInteraction(700);
+      return;
+    }
     setFocusedCardIndex(null);
     setJellyModalOpen(false);
     return;
   }
-  if (focusedCardIndex === hit.index) {
-    setJellyModalOpen(true, hit.index);
-    markInteraction(700);
+  if (!hit) {
     return;
   }
   setJellyModalOpen(false);
@@ -1447,7 +1438,7 @@ function getJellyfishScreenFacingQuaternion(objectPosition, baseQuaternion) {
   return new THREE.Quaternion().setFromUnitVectors(localBellAxis, toCamera).multiply(baseQuaternion);
 }
 
-function getJellyfishHoverScaleBoost(object, baseScale) {
+function getJellyfishFocusScaleBoost(object, baseScale) {
   if (!USE_BAKED_GEONODES_JELLYFISH || !object.userData.isBakedGeonodesJellyfish) {
     return getResponsiveSettings().focusScaleBoost;
   }
@@ -1467,7 +1458,11 @@ function setObjectDepthTest(object, enabled) {
     if (material.userData.baseDepthTest === undefined) {
       material.userData.baseDepthTest = material.depthTest;
     }
+    if (material.userData.currentDepthTest === enabled && material.depthTest === enabled) {
+      return;
+    }
     material.depthTest = enabled;
+    material.userData.currentDepthTest = enabled;
     material.needsUpdate = true;
   });
 }
@@ -1476,20 +1471,25 @@ function restoreObjectDepthTest(object) {
   const materials = Array.isArray(object.material) ? object.material : [object.material];
   materials.forEach((material) => {
     if (!material || material.userData.baseDepthTest === undefined) return;
-    material.depthTest = material.userData.baseDepthTest;
+    const baseDepthTest = material.userData.baseDepthTest;
+    if (material.userData.currentDepthTest === baseDepthTest && material.depthTest === baseDepthTest) {
+      return;
+    }
+    material.depthTest = baseDepthTest;
+    material.userData.currentDepthTest = baseDepthTest;
     material.needsUpdate = true;
   });
 }
 
-function updateCardHoverTargets() {
+function updateCardFocusTargets() {
   cardBodies.forEach((body) => {
     const approachEase = USE_BAKED_GEONODES_JELLYFISH ? 0.18 : 0.24;
-    body.hoverAmount = THREE.MathUtils.lerp(body.hoverAmount, body.hoverTarget, approachEase);
-    if (body.hoverTarget === 1 && body.hoverAmount > 0.985) {
-      body.hoverAmount = 1;
+    body.focusAmount = THREE.MathUtils.lerp(body.focusAmount, body.focusTarget, approachEase);
+    if (body.focusTarget === 1 && body.focusAmount > 0.985) {
+      body.focusAmount = 1;
     }
-    if (body.hoverTarget === 0 && body.hoverAmount < 0.018) {
-      body.hoverAmount = 0;
+    if (body.focusTarget === 0 && body.focusAmount < 0.018) {
+      body.focusAmount = 0;
     }
   });
 }
@@ -1585,10 +1585,6 @@ function resolveFloatingCardCollisions(elapsed) {
 
 function updateFloatingCards(elapsed) {
   if (!floatingCards.length) return;
-  if (pointerInsideScene && pointerNeedsRaycast) {
-    updateHoveredCardFromPointer();
-    pointerNeedsRaycast = false;
-  }
   if (USE_BAKED_GEONODES_JELLYFISH) {
     cardBodies.forEach((body) => {
       body.collisionOffset.multiplyScalar(0.88);
@@ -1597,10 +1593,10 @@ function updateFloatingCards(elapsed) {
   } else {
     resolveFloatingCardCollisions(elapsed);
   }
-  updateCardHoverTargets();
+  updateCardFocusTargets();
   floatingCards.forEach(({ object, index, basePosition, baseQuaternion, baseScale, baseRenderOrder }) => {
     const body = getBodyForCard(index);
-    const hoverAmount = body ? body.hoverAmount : 0;
+    const focusAmount = body ? body.focusAmount : 0;
     let routePosition = basePosition.clone().add(getCardRouteOffset(index, elapsed, basePosition));
     keepJellyfishAwayFromUi(routePosition);
     keepJellyfishOrbitDistance(routePosition);
@@ -1612,31 +1608,31 @@ function updateFloatingCards(elapsed) {
       routePosition = object.userData.smoothRoutePosition.clone();
     }
     const routeQuaternion = getJellyfishPathQuaternion(index, elapsed, basePosition, baseQuaternion);
-    const freezePosition = object.userData.hoverFreezePosition;
-    if (freezePosition && hoverAmount > 0.001) {
+    const freezePosition = object.userData.focusFreezePosition;
+    if (freezePosition && focusAmount > 0.001) {
       const focusPosition = getCardFocusPosition(freezePosition);
-      object.position.copy(routePosition).lerp(focusPosition, hoverAmount);
+      object.position.copy(routePosition).lerp(focusPosition, focusAmount);
       const focusQuaternion = object.userData.isBakedGeonodesJellyfish
         ? getJellyfishScreenFacingQuaternion(object.position, baseQuaternion)
         : getCardFocusQuaternion();
-      object.quaternion.copy(routeQuaternion).slerp(focusQuaternion, hoverAmount);
+      object.quaternion.copy(routeQuaternion).slerp(focusQuaternion, focusAmount);
     } else {
       object.position.copy(routePosition);
       object.quaternion.copy(routeQuaternion);
     }
-    if (body?.hoverTarget === 0 && hoverAmount < 0.015) {
-      delete object.userData.hoverFreezePosition;
-      delete object.userData.hoverFreezeQuaternion;
+    if (body?.focusTarget === 0 && focusAmount < 0.015) {
+      delete object.userData.focusFreezePosition;
+      delete object.userData.focusFreezeQuaternion;
     }
     object.scale.copy(baseScale);
-    object.scale.multiplyScalar(1 + hoverAmount * getJellyfishHoverScaleBoost(object, baseScale));
-    if (object.userData.hoverProxy) {
-      const hitRadius = Math.max((object.userData.baseVisualHeight || 3.2) * 0.62, 2.25);
-      object.userData.hoverProxy.position.copy(object.position);
-      object.userData.hoverProxy.scale.setScalar(hitRadius * (1 + hoverAmount * 0.38));
+    object.scale.multiplyScalar(1 + focusAmount * getJellyfishFocusScaleBoost(object, baseScale));
+    if (object.userData.hitProxy) {
+      const hitRadius = Math.max((object.userData.baseVisualHeight || 3.2) * 0.22, 0.86);
+      object.userData.hitProxy.position.copy(object.position);
+      object.userData.hitProxy.scale.setScalar(hitRadius * (1 + focusAmount * 0.18));
     }
     updateJellyfishAnimationForHeight(object, index);
-    if (hoverAmount > 0.02) {
+    if (focusAmount > 0.02) {
       object.renderOrder = 120 + (object.name.includes('_edge') ? 1 : 2);
       setObjectDepthTest(object, false);
     } else {
@@ -1769,25 +1765,25 @@ function updateReadableCardText() {
     const distance = Math.abs((sprite.userData.railIndex ?? 0) - active);
     const targetOpacity = distance === 0 ? 0.96 : distance === 1 ? 0.18 : 0.035;
     const body = getBodyForCard(sprite.userData.railIndex ?? 0);
-    const hoverAmount = body ? body.hoverAmount : 0;
-    sprite.material.opacity = THREE.MathUtils.lerp(sprite.material.opacity, Math.max(targetOpacity, hoverAmount * 0.92), 0.12);
+    const focusAmount = body ? body.focusAmount : 0;
+    sprite.material.opacity = THREE.MathUtils.lerp(sprite.material.opacity, Math.max(targetOpacity, focusAmount * 0.92), 0.12);
     if (sprite.userData.floatBasePosition) {
       const routePosition = sprite.userData.floatBasePosition.clone().add(
         getCardRouteOffset(sprite.userData.railIndex ?? 0, shaderClock.value, sprite.userData.floatBasePosition)
       );
-      const freezePosition = sprite.userData.hoverFreezePosition;
-      if (freezePosition && hoverAmount > 0.001) {
+      const freezePosition = sprite.userData.focusFreezePosition;
+      if (freezePosition && focusAmount > 0.001) {
         const focusPosition = getCardFocusPosition(freezePosition);
-        sprite.position.copy(routePosition).lerp(focusPosition, hoverAmount);
+        sprite.position.copy(routePosition).lerp(focusPosition, focusAmount);
       } else {
         sprite.position.copy(routePosition);
       }
-      if (body?.hoverTarget === 0 && hoverAmount < 0.015) {
-        delete sprite.userData.hoverFreezePosition;
+      if (body?.focusTarget === 0 && focusAmount < 0.015) {
+        delete sprite.userData.focusFreezePosition;
       }
       if (sprite.userData.floatBaseScale) {
-        sprite.scale.copy(sprite.userData.floatBaseScale).multiplyScalar(1 + hoverAmount * 0.12);
-        sprite.renderOrder = hoverAmount > 0.02 ? 130 : 5;
+        sprite.scale.copy(sprite.userData.floatBaseScale).multiplyScalar(1 + focusAmount * 0.12);
+        sprite.renderOrder = focusAmount > 0.02 ? 130 : 5;
       }
     }
   });
@@ -1802,21 +1798,11 @@ function moveRail(direction) {
 }
 
 function updatePointerFromEvent(event) {
-  markInteraction(260);
   const rect = renderer.domElement.getBoundingClientRect();
   pointerScreen.x = event.clientX - rect.left;
   pointerScreen.y = event.clientY - rect.top;
   pointer.x = (pointerScreen.x / rect.width) * 2 - 1;
   pointer.y = -(pointerScreen.y / rect.height) * 2 + 1;
-  pointerInsideScene = true;
-  pointerNeedsRaycast = true;
-}
-
-function clearHoveredCard() {
-  pointerInsideScene = false;
-  pointerNeedsRaycast = false;
-  setHoveredCardIndex(null);
-  renderer.domElement.style.cursor = 'default';
 }
 
 railPrev?.addEventListener('click', () => moveRail(-1));
@@ -1826,9 +1812,6 @@ jellyModal?.addEventListener('click', (event) => {
   if (event.target === jellyModal) setJellyModalOpen(false);
 });
 
-renderer.domElement.addEventListener('pointermove', updatePointerFromEvent, { passive: true });
-renderer.domElement.addEventListener('pointerleave', clearHoveredCard, { passive: true });
-renderer.domElement.addEventListener('pointercancel', clearHoveredCard, { passive: true });
 renderer.domElement.addEventListener('click', handleSceneClick, { passive: true });
 
 window.addEventListener('keydown', (event) => {
@@ -1912,7 +1895,8 @@ const cardTextTextureCache = new Map();
 const cardTextSprites = [];
 const floatingCards = [];
 const cardBodies = [];
-const cardHoverObjects = [];
+const cardBodyByIndex = new Map();
+const cardHitObjects = [];
 const sceneAnimationMixers = [];
 const jellyfishAnimationActions = new Map();
 const cardTitles = [
@@ -2283,34 +2267,6 @@ function addStarField() {
     mesh.renderOrder = 0;
     scene.add(mesh);
   });
-
-  const lineMaterial = new THREE.LineBasicMaterial({
-    color: 0x55dfff,
-    transparent: true,
-    opacity: 0.105,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false
-  });
-  for (let cluster = 0; cluster < 0; cluster++) {
-    const center = new THREE.Vector3(
-      THREE.MathUtils.randFloatSpread(12),
-      THREE.MathUtils.randFloatSpread(9),
-      THREE.MathUtils.randFloatSpread(12)
-    ).normalize().multiplyScalar(10 + Math.random() * 5);
-    const points = [];
-    const count = 4 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < count; i++) {
-      points.push(center.clone().add(new THREE.Vector3(
-        THREE.MathUtils.randFloatSpread(0.95),
-        THREE.MathUtils.randFloatSpread(0.95),
-        THREE.MathUtils.randFloatSpread(0.95)
-      )));
-    }
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const line = new THREE.Line(geometry, lineMaterial);
-    line.renderOrder = 0;
-    scene.add(line);
-  }
 }
 
 function generatedCardTexture(index, tint) {
@@ -2750,10 +2706,15 @@ async function loadBlenderMaterialOverrides() {
 function loadBakedGeonodesJellyfishAsset() {
   return new Promise((resolve, reject) => {
     loader.load(
-      `./assets/baked_geonodes_jellyfish.glb?v=${ASSET_VERSION}`,
+      `./assets/baked_geonodes_jellyfish.runtime.glb?v=${ASSET_VERSION}`,
       resolve,
       undefined,
-      reject
+      () => loader.load(
+        `./assets/baked_geonodes_jellyfish.glb?v=${ASSET_VERSION}`,
+        resolve,
+        undefined,
+        reject
+      )
     );
   });
 }
@@ -2890,18 +2851,21 @@ let animationFrameIndex = 0;
 
 function updateSceneAnimationMixers(delta) {
   animationFrameIndex += 1;
-  const activeHoverIndex = focusedCardIndex ?? hoveredCardIndex;
+  const activeFocusIndex = focusedCardIndex;
   const interactionActive = renderQualityState.interactionActive;
   sceneAnimationMixers.forEach((mixer) => {
     const data = mixer.userData || {};
-    if (!interactionActive || !data.isJellyfishMixer || data.cardIndex === activeHoverIndex) {
+    if (!data.isJellyfishMixer || data.cardIndex === activeFocusIndex) {
       const deferredDelta = data.deferredDelta || 0;
       data.deferredDelta = 0;
       mixer.update(delta + deferredDelta);
       return;
     }
+
     data.deferredDelta = (data.deferredDelta || 0) + delta;
-    const cadence = qualityProfile.name === 'desktop' ? 2 : 3;
+    const cadence = interactionActive
+      ? (qualityProfile.name === 'desktop' ? 2 : 3)
+      : (qualityProfile.name === 'desktop' ? 2 : 4);
     if ((animationFrameIndex + data.cardIndex) % cadence === 0) {
       mixer.update(data.deferredDelta);
       data.deferredDelta = 0;
@@ -2909,8 +2873,14 @@ function updateSceneAnimationMixers(delta) {
   });
 }
 
+let animationFrameId = null;
+
 function animate() {
-  requestAnimationFrame(animate);
+  if (document.hidden) {
+    animationFrameId = null;
+    return;
+  }
+  animationFrameId = requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.05);
   const elapsed = clock.elapsedTime;
   shaderClock.value = elapsed;
@@ -2937,7 +2907,25 @@ function animate() {
   composer.render();
 }
 
-animate();
+function startAnimationLoop() {
+  if (animationFrameId !== null) return;
+  clock.getDelta();
+  animationFrameId = requestAnimationFrame(animate);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (animationFrameId !== null) {
+      cancelAnimationFrame(animationFrameId);
+    }
+    animationFrameId = null;
+    return;
+  }
+  markInteraction(300);
+  startAnimationLoop();
+});
+
+startAnimationLoop();
 
 window.addEventListener('resize', () => {
   const settings = getResponsiveSettings();

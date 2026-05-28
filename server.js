@@ -11,6 +11,7 @@ const types = {
   '.js': 'text/javascript; charset=utf-8',
   '.glb': 'model/gltf-binary',
   '.png': 'image/png',
+  '.wasm': 'application/wasm',
   '.map': 'application/json; charset=utf-8'
 };
 
@@ -37,9 +38,14 @@ const server = http.createServer((request, response) => {
       return;
     }
 
+    const ext = path.extname(file);
+    const cacheControl = /[\\/]assets[\\/]|[\\/]vendor[\\/]/.test(file)
+      ? 'public, max-age=31536000, immutable'
+      : 'no-cache';
+
     response.writeHead(200, {
-      'Content-Type': types[path.extname(file)] || 'application/octet-stream',
-      'Cache-Control': 'no-store'
+      'Content-Type': types[ext] || 'application/octet-stream',
+      'Cache-Control': cacheControl
     });
     fs.createReadStream(file).pipe(response);
   });
