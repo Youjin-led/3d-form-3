@@ -36,7 +36,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'nikita-hood-art-v55';
+const ASSET_VERSION = 'nikita-hood-art-v56';
 const NIKITA_ART_PATHS = Array.from(
   { length: ACTIVE_JELLYFISH_COUNT },
   (_, index) => `./assets/nikita/art-${String(index).padStart(2, '0')}.jpg?v=${ASSET_VERSION}`
@@ -1531,6 +1531,13 @@ function focusArtworkJellyfish(index) {
   markInteraction(900);
 }
 
+function openArtworkJellyfish(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= ACTIVE_JELLYFISH_COUNT) return;
+  setFocusedCardIndex(index);
+  setJellyModalOpen(true, index);
+  markInteraction(900);
+}
+
 function updateArtworkMenuActive() {
   artworkMenu?.querySelectorAll('.artwork-menu__item').forEach((item) => {
     const active = Number(item.dataset.index) === focusedCardIndex;
@@ -1578,6 +1585,7 @@ function buildArtworkMenu() {
     button.type = 'button';
     button.setAttribute('aria-pressed', 'false');
     button.addEventListener('click', () => focusArtworkJellyfish(index));
+    button.addEventListener('dblclick', () => openArtworkJellyfish(index));
 
     const image = document.createElement('img');
     image.src = NIKITA_ART_PATHS[index];
