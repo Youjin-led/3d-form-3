@@ -115,3 +115,9 @@
 - User confirmed v42 removed the flashes but made the star field too dim.
 - Kept mobile/tablet postprocessing off and increased baked space-dust opacity with caps instead of bringing bloom back.
 - Reduced active jellyfish from 12 to 10 to lower visual density and render cost.
+
+## 2026-05-29 Nikita hood art v44
+
+- Found exactly ten PNG files in `Работы Никиты для сайта`.
+- Generated 1024px JPEG web textures in `assets/nikita/`, reducing each source image to roughly 95-489 KB.
+- Added a hood-mounted masked art plane per active jellyfish so the selected jellyfish reveals its assigned image as it approaches the camera.

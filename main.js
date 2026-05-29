@@ -33,7 +33,11 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'mobile-balanced-stars-v43';
+const ASSET_VERSION = 'nikita-hood-art-v44';
+const NIKITA_ART_PATHS = Array.from(
+  { length: ACTIVE_JELLYFISH_COUNT },
+  (_, index) => `./assets/nikita/art-${String(index).padStart(2, '0')}.jpg?v=${ASSET_VERSION}`
+);
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -1133,6 +1137,71 @@ function makeBakedJellyfishMaterial(index) {
   return material;
 }
 
+function getNikitaArtTexture(index) {
+  const path = NIKITA_ART_PATHS[index % NIKITA_ART_PATHS.length];
+  if (nikitaArtTextureCache.has(path)) {
+    return nikitaArtTextureCache.get(path);
+  }
+  const texture = textureLoader.load(path);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  nikitaArtTextureCache.set(path, texture);
+  return texture;
+}
+
+function makeHoodArtAlphaTexture() {
+  if (hoodArtAlphaTexture) return hoodArtAlphaTexture;
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createRadialGradient(256, 226, 42, 256, 256, 238);
+  gradient.addColorStop(0.0, 'rgba(255,255,255,1)');
+  gradient.addColorStop(0.62, 'rgba(255,255,255,0.96)');
+  gradient.addColorStop(0.82, 'rgba(255,255,255,0.44)');
+  gradient.addColorStop(1.0, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, 512, 512);
+  hoodArtAlphaTexture = new THREE.CanvasTexture(canvas);
+  hoodArtAlphaTexture.needsUpdate = true;
+  return hoodArtAlphaTexture;
+}
+
+function attachNikitaArtToJellyfish(object, index) {
+  const geometry = object.geometry;
+  if (!geometry) return;
+  geometry.computeBoundingBox();
+  const bounds = geometry.boundingBox;
+  if (!bounds) return;
+  const localSize = bounds.getSize(new THREE.Vector3());
+  const localCenter = bounds.getCenter(new THREE.Vector3());
+  const hoodDiameter = Math.max(Math.max(localSize.x, localSize.z) * 0.22, localSize.y * 0.075);
+  const material = new THREE.MeshBasicMaterial({
+    map: getNikitaArtTexture(index),
+    alphaMap: makeHoodArtAlphaTexture(),
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    depthTest: false,
+    side: THREE.DoubleSide,
+    toneMapped: false
+  });
+  const art = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+  art.name = `${object.name}_nikita_hood_art`;
+  art.position.set(localCenter.x, bounds.max.y - localSize.y * 0.16, localCenter.z);
+  art.rotation.x = -Math.PI / 2;
+  art.scale.set(hoodDiameter, hoodDiameter, 1);
+  art.renderOrder = 140 + index;
+  art.frustumCulled = false;
+  art.visible = false;
+  art.userData.baseOpacity = 0.72;
+  object.add(art);
+  object.userData.nikitaHoodArt = art;
+}
+
 function remapMorphClipForObject(clip, objectName, phaseOffset = 0) {
   const tracks = clip.tracks.map((track) => {
     const cloned = track.clone();
@@ -1194,6 +1263,7 @@ function replaceCardsWithBakedJellyfish(model, bakedGltf) {
     object.scale.multiplyScalar(scaleFactor);
     object.userData.baseVisualHeight = targetHeight;
     object.userData.jellyfishHoodHeightRatio = 0.28;
+    attachNikitaArtToJellyfish(object, index);
     object.updateMatrix();
     object.updateMatrixWorld(true);
 
@@ -1710,6 +1780,12 @@ function updateFloatingCards(elapsed) {
       object.userData.hitProxy.position.copy(object.position);
       object.userData.hitProxy.scale.setScalar(hitRadius * (1 + focusAmount * 0.18));
     }
+    if (object.userData.nikitaHoodArt) {
+      const art = object.userData.nikitaHoodArt;
+      const artOpacity = THREE.MathUtils.smoothstep(focusAmount, 0.18, 0.92) * art.userData.baseOpacity;
+      art.visible = artOpacity > 0.01;
+      art.material.opacity = artOpacity;
+    }
     updateJellyfishAnimationForHeight(object, index);
     if (focusAmount > 0.02) {
       object.renderOrder = 120 + (object.name.includes('_edge') ? 1 : 2);
@@ -1980,10 +2056,13 @@ const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('./vendor/draco/gltf/');
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
+const textureLoader = new THREE.TextureLoader();
 const shaderClock = { value: 0 };
 const cardTextureCache = new Map();
 const cardBackTextureCache = new Map();
 const cardTextTextureCache = new Map();
+const nikitaArtTextureCache = new Map();
+let hoodArtAlphaTexture = null;
 const cardTextSprites = [];
 const floatingCards = [];
 const cardBodies = [];

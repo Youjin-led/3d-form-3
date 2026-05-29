@@ -108,3 +108,9 @@
 - Active jellyfish count is reduced from 12 to 10.
 - Mobile/tablet keep direct rendering without bloom/film, but baked space-dust material opacity is raised moderately.
 - This restores star presence without reintroducing the postprocessing amplification that caused full-screen white flashes.
+
+## Nikita hood art v44
+
+- Ten optimized Nikita artwork textures are assigned one-to-one to the ten active jellyfish.
+- Each artwork is mounted as a masked plane inside the jellyfish hood and fades in only while that jellyfish is focused.
+- The original artwork files are resized to web-friendly textures before being served from `assets/nikita/`.
