@@ -16,6 +16,7 @@ const loadState = document.querySelector('#load-state');
 const railCount = document.querySelector('#rail-count');
 const railPrev = document.querySelector('#rail-prev');
 const railNext = document.querySelector('#rail-next');
+const artworkMenu = document.querySelector('#artwork-menu');
 const jellyModal = document.querySelector('#jelly-modal');
 const jellyModalClose = document.querySelector('#jelly-modal-close');
 const jellyModalIndex = document.querySelector('#jelly-modal-index');
@@ -33,11 +34,23 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'nikita-hood-art-v50';
+const ASSET_VERSION = 'nikita-hood-art-v51';
 const NIKITA_ART_PATHS = Array.from(
   { length: ACTIVE_JELLYFISH_COUNT },
   (_, index) => `./assets/nikita/art-${String(index).padStart(2, '0')}.jpg?v=${ASSET_VERSION}`
 );
+const NIKITA_ART_TITLES = [
+  'SUSTAINABLE HORIZONS',
+  'E.C.H.O.',
+  'DISCOVER YOUR PATRONUS',
+  'FRONTIER WITHIN',
+  'SECRET SKY',
+  'PROMETHEUS',
+  'QUANTUM ARCHIVE',
+  'MUSEUM SIGNAL',
+  'INNER ORBIT',
+  'SYNTHETIC DREAMS'
+];
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -1496,6 +1509,7 @@ function setFocusedCardIndex(index) {
     body.focusTarget = body.index === index ? 1 : 0;
   });
   window.__FOCUSED_CARD_INDEX = focusedCardIndex;
+  updateArtworkMenuActive();
 }
 
 window.__SET_FOCUSED_JELLYFISH = (index) => {
@@ -1507,6 +1521,55 @@ window.__SET_FOCUSED_JELLYFISH = (index) => {
   setJellyModalOpen(false);
   setFocusedCardIndex(index);
 };
+
+function focusArtworkJellyfish(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= ACTIVE_JELLYFISH_COUNT) return;
+  setJellyModalOpen(false);
+  setFocusedCardIndex(index);
+  markInteraction(900);
+}
+
+function updateArtworkMenuActive() {
+  artworkMenu?.querySelectorAll('.artwork-menu__item').forEach((item) => {
+    const active = Number(item.dataset.index) === focusedCardIndex;
+    item.classList.toggle('is-active', active);
+    item.querySelector('button')?.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+function buildArtworkMenu() {
+  if (!artworkMenu) return;
+  artworkMenu.replaceChildren();
+  NIKITA_ART_TITLES.forEach((title, index) => {
+    const item = document.createElement('li');
+    item.className = 'artwork-menu__item';
+    item.dataset.index = String(index);
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.setAttribute('aria-pressed', 'false');
+    button.addEventListener('click', () => focusArtworkJellyfish(index));
+
+    const image = document.createElement('img');
+    image.src = NIKITA_ART_PATHS[index];
+    image.alt = '';
+    image.loading = 'eager';
+    image.decoding = 'async';
+
+    const number = document.createElement('span');
+    number.className = 'artwork-menu__number';
+    number.textContent = String(index + 1).padStart(2, '0');
+
+    const label = document.createElement('span');
+    label.className = 'artwork-menu__title';
+    label.textContent = title;
+
+    button.append(image, number, label);
+    item.append(button);
+    artworkMenu.append(item);
+  });
+  updateArtworkMenuActive();
+}
 
 function getPointerCardHit() {
   if (!cardHitObjects.length) return null;
@@ -2017,12 +2080,17 @@ function updatePointerFromEvent(event) {
   pointer.y = -(pointerScreen.y / rect.height) * 2 + 1;
 }
 
+buildArtworkMenu();
+
 railPrev?.addEventListener('click', () => moveRail(-1));
 railNext?.addEventListener('click', () => moveRail(1));
 jellyModalClose?.addEventListener('click', () => setJellyModalOpen(false));
 jellyModal?.addEventListener('click', (event) => {
   if (event.target === jellyModal) setJellyModalOpen(false);
 });
+artworkMenu?.addEventListener('wheel', (event) => event.stopPropagation(), { passive: true });
+artworkMenu?.addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true });
+artworkMenu?.addEventListener('touchmove', (event) => event.stopPropagation(), { passive: true });
 
 renderer.domElement.addEventListener('click', handleSceneClick, { passive: true });
 renderer.domElement.addEventListener('touchmove', (event) => {

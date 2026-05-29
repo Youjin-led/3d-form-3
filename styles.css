@@ -155,6 +155,99 @@ canvas {
   opacity: 0.75;
 }
 
+.artwork-menu {
+  position: fixed;
+  top: 34px;
+  left: 34px;
+  z-index: 5;
+  width: min(278px, calc(100vw - 68px));
+  max-height: min(420px, calc(100vh - 260px));
+  padding: 8px;
+  border: 1px solid rgba(186, 229, 220, 0.34);
+  border-radius: 8px;
+  background: rgba(2, 8, 10, 0.48);
+  box-shadow:
+    0 0 32px rgba(123, 244, 178, 0.12),
+    inset 0 0 24px rgba(147, 91, 255, 0.08);
+  backdrop-filter: blur(10px);
+}
+
+.artwork-menu__list {
+  display: grid;
+  gap: 5px;
+  max-height: calc(min(420px, calc(100vh - 260px)) - 16px);
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(154, 221, 222, 0.34) transparent;
+}
+
+.artwork-menu__item button {
+  display: grid;
+  grid-template-columns: 34px 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 42px;
+  padding: 4px 8px 4px 4px;
+  color: rgba(235, 250, 255, 0.74);
+  border: 1px solid rgba(154, 221, 222, 0.14);
+  border-radius: 6px;
+  background: rgba(4, 13, 17, 0.30);
+  box-shadow: inset 0 0 14px rgba(104, 170, 210, 0.04);
+  font: inherit;
+  text-align: left;
+}
+
+.artwork-menu__item button:hover,
+.artwork-menu__item button:focus-visible,
+.artwork-menu__item.is-active button {
+  color: rgba(249, 246, 255, 0.94);
+  border-color: rgba(190, 239, 232, 0.46);
+  background: rgba(18, 17, 38, 0.58);
+  box-shadow:
+    0 0 18px rgba(93, 230, 233, 0.12),
+    inset 0 0 18px rgba(142, 76, 255, 0.12);
+}
+
+.artwork-menu__item button:focus-visible {
+  outline: 1px solid rgba(246, 242, 255, 0.68);
+  outline-offset: 2px;
+}
+
+.artwork-menu__item img {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(235, 250, 255, 0.18);
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(0, 0, 0, 0.36);
+}
+
+.artwork-menu__number,
+.artwork-menu__title {
+  letter-spacing: 0;
+  text-shadow:
+    1px 0 rgba(255, 59, 139, 0.55),
+    -1px 0 rgba(26, 215, 255, 0.45),
+    0 0 13px rgba(171, 132, 255, 0.42);
+}
+
+.artwork-menu__number {
+  color: rgba(121, 236, 238, 0.72);
+  font-size: 10px;
+}
+
+.artwork-menu__title {
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.12;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .side-menu {
   position: fixed;
   left: 44px;
@@ -308,6 +401,18 @@ canvas {
     right: 28px;
   }
 
+  .artwork-menu {
+    top: max(22px, env(safe-area-inset-top));
+    left: 24px;
+    width: 244px;
+    max-height: min(404px, calc(100vh - 238px));
+    backdrop-filter: blur(7px);
+  }
+
+  .artwork-menu__list {
+    max-height: calc(min(404px, calc(100vh - 238px)) - 16px);
+  }
+
   .side-menu {
     left: 28px;
     bottom: max(28px, env(safe-area-inset-bottom));
@@ -360,6 +465,38 @@ canvas {
     grid-template-columns: 34px minmax(76px, 104px) 34px;
     height: 36px;
     background: rgba(3, 9, 12, 0.38);
+  }
+
+  .artwork-menu {
+    top: calc(max(14px, env(safe-area-inset-top)) + 54px);
+    left: 14px;
+    width: min(194px, calc(100vw - 196px));
+    min-width: 148px;
+    max-height: 34vh;
+    padding: 6px;
+    background: rgba(2, 8, 10, 0.42);
+  }
+
+  .artwork-menu__list {
+    gap: 4px;
+    max-height: calc(34vh - 12px);
+  }
+
+  .artwork-menu__item button {
+    grid-template-columns: 28px 22px minmax(0, 1fr);
+    gap: 6px;
+    min-height: 34px;
+    padding: 3px 6px 3px 3px;
+  }
+
+  .artwork-menu__item img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .artwork-menu__number,
+  .artwork-menu__title {
+    font-size: 9px;
   }
 
   .rail-control button {
@@ -462,6 +599,19 @@ canvas {
 
   .rail-control {
     top: calc(max(14px, env(safe-area-inset-top)) + 48px);
+  }
+
+  .artwork-menu {
+    width: 154px;
+  }
+
+  .artwork-menu__item button {
+    grid-template-columns: 26px 20px minmax(0, 1fr);
+  }
+
+  .artwork-menu__item img {
+    width: 26px;
+    height: 26px;
   }
 
   .side-menu a:nth-of-type(4),
