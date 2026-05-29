@@ -109,3 +109,9 @@
 - Treated the remaining suspect as mobile postprocessing: `EffectComposer` render targets, bloom, film, and resize while swiping.
 - Disabled mobile/tablet postprocessing and render directly with the WebGL renderer; desktop still uses composer/bloom/film.
 - Reduced mobile/tablet point-light scale after user clarified the flash can happen in static animation when jellyfish pass a hot scene point.
+
+## 2026-05-29 Mobile balanced stars v43
+
+- User confirmed v42 removed the flashes but made the star field too dim.
+- Kept mobile/tablet postprocessing off and increased baked space-dust opacity with caps instead of bringing bloom back.
+- Reduced active jellyfish from 12 to 10 to lower visual density and render cost.

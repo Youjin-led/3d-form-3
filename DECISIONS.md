@@ -102,3 +102,9 @@
 - This removes render-target resize/bloom amplification as a possible source of full-screen white flashes while swiping.
 - Mobile/tablet point lights are reduced further so moving jellyfish cannot cross a hot light zone and wash out a large part of the frame.
 - Desktop keeps the postprocessing stack.
+
+## Mobile balanced stars v43
+
+- Active jellyfish count is reduced from 12 to 10.
+- Mobile/tablet keep direct rendering without bloom/film, but baked space-dust material opacity is raised moderately.
+- This restores star presence without reintroducing the postprocessing amplification that caused full-screen white flashes.

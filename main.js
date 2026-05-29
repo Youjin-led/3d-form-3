@@ -30,10 +30,10 @@ const USE_JELLYFISH_CARD_MODE = true;
 const USE_BAKED_GEONODES_JELLYFISH = true;
 const PUBLISHED_CARD_TARGET_WIDTH = 1.02;
 const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
-const ACTIVE_JELLYFISH_COUNT = 12;
+const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'mobile-direct-render-v42';
+const ASSET_VERSION = 'mobile-balanced-stars-v43';
 
 function getDeviceProfile() {
   const width = window.innerWidth || 1440;
@@ -67,6 +67,7 @@ function getDeviceProfile() {
       foregroundParticleLayers: false,
       proceduralPointClouds: false,
       usePostprocessing: false,
+      spaceDustOpacityScale: 1.48,
       textureScale: 1,
     };
   }
@@ -94,6 +95,7 @@ function getDeviceProfile() {
       foregroundParticleLayers: false,
       proceduralPointClouds: false,
       usePostprocessing: false,
+      spaceDustOpacityScale: 1.32,
       textureScale: 1,
     };
   }
@@ -120,6 +122,7 @@ function getDeviceProfile() {
     foregroundParticleLayers: true,
     proceduralPointClouds: true,
     usePostprocessing: true,
+    spaceDustOpacityScale: 1,
     textureScale: 1,
   };
 }
@@ -138,6 +141,7 @@ function publishQualityProfile() {
     foregroundParticleLayers: profile.foregroundParticleLayers,
     proceduralPointClouds: profile.proceduralPointClouds,
     usePostprocessing: profile.usePostprocessing,
+    spaceDustOpacityScale: profile.spaceDustOpacityScale,
   };
   return profile;
 }
@@ -2747,13 +2751,19 @@ function toDisplayMaterial(label, source) {
     if (isSpaceDust) {
       displayColor.offsetHSL(0.0, mobileSpaceDust ? 0.18 : 0.22, mobileSpaceDust ? -0.015 : 0.04);
     }
+    const mobileSpaceOpacityScale = mobileSpaceDust ? qualityProfile.spaceDustOpacityScale : 1;
+    const mobileSpaceOpacity = isReferenceParticle
+      ? 0.26
+      : isReferenceRibbon
+        ? 0.055
+        : 0.085;
     const material = new THREE.MeshBasicMaterial({
       name: source.name,
       map: source.map || null,
       color: displayColor,
       transparent: true,
       opacity: mobileSpaceDust
-        ? (isReferenceParticle ? 0.26 : isReferenceRibbon ? 0.055 : 0.085)
+        ? Math.min(mobileSpaceOpacity * mobileSpaceOpacityScale, isReferenceRibbon ? 0.10 : 0.40)
         : (isReferenceParticle ? 0.58 : isReferenceRibbon ? 0.10 : isSpaceDust ? 0.14 : 0.72),
       blending: mobileSpaceDust ? THREE.NormalBlending : isSpaceDust ? THREE.AdditiveBlending : THREE.NormalBlending,
       depthWrite: false,
