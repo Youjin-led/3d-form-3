@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Spine Orbit Scene</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="./styles.css?v=nikita-hood-art-v51" />
+    <link rel="stylesheet" href="./styles.css?v=nikita-hood-art-v52" />
     <script type="importmap">
       {
         "imports": {
@@ -24,7 +24,18 @@
       <a href="#">CONTACT</a>
     </nav>
 
-    <aside class="artwork-menu" aria-label="Artwork jellyfish selector">
+    <aside class="artwork-menu" aria-label="Artwork jellyfish selector" data-artwork-menu-panel>
+      <button
+        class="artwork-menu__toggle"
+        id="artwork-menu-toggle"
+        type="button"
+        aria-controls="artwork-menu"
+        aria-expanded="true"
+        aria-label="Collapse artwork selector"
+      >
+        <span class="artwork-menu__toggle-icon" aria-hidden="true"></span>
+        <span class="artwork-menu__toggle-label">ARTWORKS</span>
+      </button>
       <ol class="artwork-menu__list" id="artwork-menu"></ol>
     </aside>
 
@@ -52,6 +63,6 @@
     </section>
 
     <div class="load-state" id="load-state">LOADING SCENE</div>
-    <script type="module" src="./main.js?v=nikita-hood-art-v51"></script>
+    <script type="module" src="./main.js?v=nikita-hood-art-v52"></script>
   </body>
 </html>

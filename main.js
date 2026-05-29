@@ -17,6 +17,8 @@ const railCount = document.querySelector('#rail-count');
 const railPrev = document.querySelector('#rail-prev');
 const railNext = document.querySelector('#rail-next');
 const artworkMenu = document.querySelector('#artwork-menu');
+const artworkMenuPanel = document.querySelector('[data-artwork-menu-panel]');
+const artworkMenuToggle = document.querySelector('#artwork-menu-toggle');
 const jellyModal = document.querySelector('#jelly-modal');
 const jellyModalClose = document.querySelector('#jelly-modal-close');
 const jellyModalIndex = document.querySelector('#jelly-modal-index');
@@ -34,7 +36,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'nikita-hood-art-v51';
+const ASSET_VERSION = 'nikita-hood-art-v52';
 const NIKITA_ART_PATHS = Array.from(
   { length: ACTIVE_JELLYFISH_COUNT },
   (_, index) => `./assets/nikita/art-${String(index).padStart(2, '0')}.jpg?v=${ASSET_VERSION}`
@@ -1537,6 +1539,33 @@ function updateArtworkMenuActive() {
   });
 }
 
+function setArtworkMenuCollapsed(collapsed, persist = true) {
+  if (!artworkMenuPanel || !artworkMenuToggle) return;
+  artworkMenuPanel.classList.toggle('is-collapsed', collapsed);
+  artworkMenuToggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  artworkMenuToggle.setAttribute(
+    'aria-label',
+    collapsed ? 'Expand artwork selector' : 'Collapse artwork selector'
+  );
+  if (persist) {
+    try {
+      localStorage.setItem('artworkMenuCollapsed', collapsed ? '1' : '0');
+    } catch (error) {
+      // Local storage can be unavailable in strict browser modes.
+    }
+  }
+}
+
+function restoreArtworkMenuState() {
+  let collapsed = false;
+  try {
+    collapsed = localStorage.getItem('artworkMenuCollapsed') === '1';
+  } catch (error) {
+    collapsed = false;
+  }
+  setArtworkMenuCollapsed(collapsed, false);
+}
+
 function buildArtworkMenu() {
   if (!artworkMenu) return;
   artworkMenu.replaceChildren();
@@ -2081,16 +2110,20 @@ function updatePointerFromEvent(event) {
 }
 
 buildArtworkMenu();
+restoreArtworkMenuState();
 
 railPrev?.addEventListener('click', () => moveRail(-1));
 railNext?.addEventListener('click', () => moveRail(1));
+artworkMenuToggle?.addEventListener('click', () => {
+  setArtworkMenuCollapsed(!artworkMenuPanel?.classList.contains('is-collapsed'));
+});
 jellyModalClose?.addEventListener('click', () => setJellyModalOpen(false));
 jellyModal?.addEventListener('click', (event) => {
   if (event.target === jellyModal) setJellyModalOpen(false);
 });
-artworkMenu?.addEventListener('wheel', (event) => event.stopPropagation(), { passive: true });
-artworkMenu?.addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true });
-artworkMenu?.addEventListener('touchmove', (event) => event.stopPropagation(), { passive: true });
+artworkMenuPanel?.addEventListener('wheel', (event) => event.stopPropagation(), { passive: true });
+artworkMenuPanel?.addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true });
+artworkMenuPanel?.addEventListener('touchmove', (event) => event.stopPropagation(), { passive: true });
 
 renderer.domElement.addEventListener('click', handleSceneClick, { passive: true });
 renderer.domElement.addEventListener('touchmove', (event) => {
