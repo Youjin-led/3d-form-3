@@ -156,6 +156,12 @@ canvas {
   opacity: 0.75;
 }
 
+.top-nav,
+.rail-control,
+.side-menu {
+  display: none !important;
+}
+
 .artwork-menu {
   position: fixed;
   top: 34px;
