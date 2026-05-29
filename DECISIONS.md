@@ -114,3 +114,14 @@
 - Ten optimized Nikita artwork textures are assigned one-to-one to the ten active jellyfish.
 - Each artwork is mounted as a masked plane inside the jellyfish hood and fades in only while that jellyfish is focused.
 - The original artwork files are resized to web-friendly textures before being served from `assets/nikita/`.
+
+## Camera-facing hood art v45
+
+- Hood artworks now use the jellyfish hood position but render as camera-facing billboards.
+- This keeps every artwork upright and readable even when the jellyfish body rolls or turns sideways.
+
+## Hood art overlay v50
+
+- Hood artworks render in a separate overlay scene after the main 3D scene.
+- The overlay keeps each artwork at the hood's screen position but clamps it to a stable camera depth, preventing near-plane clipping.
+- Focused jellyfish bodies fade to partial transparency while the artwork is visible, so dark hoods cannot cover the image.

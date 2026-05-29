@@ -33,7 +33,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'nikita-hood-art-v44';
+const ASSET_VERSION = 'nikita-hood-art-v50';
 const NIKITA_ART_PATHS = Array.from(
   { length: ACTIVE_JELLYFISH_COUNT },
   (_, index) => `./assets/nikita/art-${String(index).padStart(2, '0')}.jpg?v=${ASSET_VERSION}`
@@ -781,8 +781,10 @@ const REFERENCE_CARD_LAYOUT = [
 ];
 
 const scene = new THREE.Scene();
+const hoodArtScene = new THREE.Scene();
 window.__THREE = THREE;
 window.__THREE_SCENE = scene;
+window.__THREE_HOOD_ART_SCENE = hoodArtScene;
 scene.background = new THREE.Color(0x010607);
 scene.fog = new THREE.FogExp2(0x010607, 0.0058);
 
@@ -1191,14 +1193,13 @@ function attachNikitaArtToJellyfish(object, index) {
   });
   const art = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
   art.name = `${object.name}_nikita_hood_art`;
-  art.position.set(localCenter.x, bounds.max.y - localSize.y * 0.16, localCenter.z);
-  art.rotation.x = -Math.PI / 2;
-  art.scale.set(hoodDiameter, hoodDiameter, 1);
-  art.renderOrder = 140 + index;
+  art.renderOrder = 960 + index;
   art.frustumCulled = false;
   art.visible = false;
+  art.userData.localHoodPosition = new THREE.Vector3(localCenter.x, bounds.max.y - localSize.y * 0.16, localCenter.z);
+  art.userData.localHoodDiameter = hoodDiameter;
   art.userData.baseOpacity = 0.72;
-  object.add(art);
+  hoodArtScene.add(art);
   object.userData.nikitaHoodArt = art;
 }
 
@@ -1497,6 +1498,16 @@ function setFocusedCardIndex(index) {
   window.__FOCUSED_CARD_INDEX = focusedCardIndex;
 }
 
+window.__SET_FOCUSED_JELLYFISH = (index) => {
+  if (!Number.isInteger(index) || index < 0 || index >= ACTIVE_JELLYFISH_COUNT) {
+    setFocusedCardIndex(null);
+    setJellyModalOpen(false);
+    return;
+  }
+  setJellyModalOpen(false);
+  setFocusedCardIndex(index);
+};
+
 function getPointerCardHit() {
   if (!cardHitObjects.length) return null;
   raycaster.setFromCamera(pointer, camera);
@@ -1626,6 +1637,33 @@ function restoreObjectDepthTest(object) {
     }
     material.depthTest = baseDepthTest;
     material.userData.currentDepthTest = baseDepthTest;
+    material.needsUpdate = true;
+  });
+}
+
+function setObjectFocusOpacity(object, focusAmount) {
+  const materials = Array.isArray(object.material) ? object.material : [object.material];
+  const artReveal = THREE.MathUtils.smoothstep(focusAmount, 0.18, 0.92);
+  materials.forEach((material) => {
+    if (!material) return;
+    if (material.userData.baseOpacity === undefined) {
+      material.userData.baseOpacity = material.opacity;
+      material.userData.baseTransparent = material.transparent;
+      material.userData.baseDepthWrite = material.depthWrite;
+    }
+    const targetOpacity = THREE.MathUtils.lerp(material.userData.baseOpacity, 0.32, artReveal);
+    const targetTransparent = artReveal > 0.01 || material.userData.baseTransparent;
+    const targetDepthWrite = artReveal > 0.01 ? false : material.userData.baseDepthWrite;
+    if (
+      Math.abs(material.opacity - targetOpacity) < 0.002
+      && material.transparent === targetTransparent
+      && material.depthWrite === targetDepthWrite
+    ) {
+      return;
+    }
+    material.opacity = targetOpacity;
+    material.transparent = targetTransparent;
+    material.depthWrite = targetDepthWrite;
     material.needsUpdate = true;
   });
 }
@@ -1785,6 +1823,17 @@ function updateFloatingCards(elapsed) {
       const artOpacity = THREE.MathUtils.smoothstep(focusAmount, 0.18, 0.92) * art.userData.baseOpacity;
       art.visible = artOpacity > 0.01;
       art.material.opacity = artOpacity;
+      hoodArtWorldPosition.copy(art.userData.localHoodPosition);
+      object.localToWorld(hoodArtWorldPosition);
+      object.getWorldScale(hoodArtWorldScale);
+      const hoodScale = art.userData.localHoodDiameter * Math.max(hoodArtWorldScale.x, hoodArtWorldScale.y, hoodArtWorldScale.z);
+      hoodArtScreenPosition.copy(hoodArtWorldPosition).project(camera);
+      hoodArtScreenPosition.z = 0;
+      art.position.copy(hoodArtScreenPosition.unproject(camera));
+      art.quaternion.copy(camera.getWorldQuaternion(hoodArtCameraQuaternion));
+      art.scale.setScalar(hoodScale);
+      art.renderOrder = 960 + index;
+      setObjectFocusOpacity(object, focusAmount);
     }
     updateJellyfishAnimationForHeight(object, index);
     if (focusAmount > 0.02) {
@@ -2063,6 +2112,10 @@ const cardBackTextureCache = new Map();
 const cardTextTextureCache = new Map();
 const nikitaArtTextureCache = new Map();
 let hoodArtAlphaTexture = null;
+const hoodArtWorldPosition = new THREE.Vector3();
+const hoodArtWorldScale = new THREE.Vector3();
+const hoodArtCameraQuaternion = new THREE.Quaternion();
+const hoodArtScreenPosition = new THREE.Vector3();
 const cardTextSprites = [];
 const floatingCards = [];
 const cardBodies = [];
@@ -3117,6 +3170,11 @@ function animate() {
   } else {
     renderer.render(scene, camera);
   }
+  const baseAutoClear = renderer.autoClear;
+  renderer.autoClear = false;
+  renderer.clearDepth();
+  renderer.render(hoodArtScene, camera);
+  renderer.autoClear = baseAutoClear;
 }
 
 function startAnimationLoop() {

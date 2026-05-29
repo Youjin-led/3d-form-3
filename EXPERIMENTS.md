@@ -121,3 +121,16 @@
 - Found exactly ten PNG files in `Работы Никиты для сайта`.
 - Generated 1024px JPEG web textures in `assets/nikita/`, reducing each source image to roughly 95-489 KB.
 - Added a hood-mounted masked art plane per active jellyfish so the selected jellyfish reveals its assigned image as it approaches the camera.
+
+## 2026-05-29 Camera-facing hood art v45
+
+- User reported that some artworks were missing, sideways, or upside down when different jellyfish focused.
+- Found the art planes inherited the jellyfish object's roll because they were attached as children.
+- Moved art planes to scene-level billboards that track each hood position while copying the camera quaternion.
+
+## 2026-05-29 Hood art overlay v50
+
+- Ran a mobile Puppeteer focus sweep across all ten jellyfish and captured per-index screenshots.
+- Found some art planes were alive and textured but either covered by the focused jellyfish hood or clipped by the camera near plane.
+- Moved hood art to a dedicated overlay render pass, disabled clearing before that pass, and clamped artwork depth to projected `z = 0`.
+- Verified all ten artworks are visible, upright, texture-loaded, and centered in `qa-hood-art-v50-contact.png` with no console errors.
