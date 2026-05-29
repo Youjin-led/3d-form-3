@@ -36,7 +36,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'nikita-hood-art-v53';
+const ASSET_VERSION = 'nikita-hood-art-v54';
 const NIKITA_ART_PATHS = Array.from(
   { length: ACTIVE_JELLYFISH_COUNT },
   (_, index) => `./assets/nikita/art-${String(index).padStart(2, '0')}.jpg?v=${ASSET_VERSION}`

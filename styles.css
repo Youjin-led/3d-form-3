@@ -70,6 +70,7 @@ canvas {
 }
 
 .top-nav {
+  display: none;
   position: fixed;
   top: 34px;
   right: 34px;
@@ -92,11 +93,11 @@ canvas {
 }
 
 .rail-control {
+  display: none;
   position: fixed;
   top: 98px;
   right: 42px;
   z-index: 4;
-  display: grid;
   grid-template-columns: 38px 94px 38px;
   align-items: center;
   gap: 6px;
