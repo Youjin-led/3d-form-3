@@ -36,7 +36,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'nikita-hood-art-v56';
+const ASSET_VERSION = 'nikita-hood-art-v57';
 const NIKITA_ART_PATHS = Array.from(
   { length: ACTIVE_JELLYFISH_COUNT },
   (_, index) => `./assets/nikita/art-${String(index).padStart(2, '0')}.jpg?v=${ASSET_VERSION}`
@@ -2152,6 +2152,10 @@ window.addEventListener('wheel', (event) => {
     return;
   }
   event.preventDefault();
+  if (focusedCardIndex !== null) {
+    markInteraction(500);
+    return;
+  }
   const now = performance.now();
   if (now - cardRail.lastWheelAt < 520) {
     return;
@@ -2175,6 +2179,11 @@ window.addEventListener('touchmove', (event) => {
     return;
   }
   event.preventDefault();
+  if (focusedCardIndex !== null) {
+    cardRail.touchY = nextY;
+    markInteraction(500);
+    return;
+  }
   cardRail.touchY = nextY;
   markInteraction(1200);
   moveRail(delta > 0 ? 1 : -1);
