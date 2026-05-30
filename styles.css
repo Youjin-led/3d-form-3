@@ -407,26 +407,19 @@ canvas {
 }
 
 .jelly-modal {
-  --modal-art-image: none;
   position: fixed;
   top: 50%;
   left: 50%;
   z-index: 8;
-  width: min(70vw, 1040px);
-  height: min(70vh, 680px);
-  min-width: min(640px, calc(100vw - 44px));
-  min-height: min(420px, calc(100vh - 44px));
-  display: grid;
-  align-content: center;
-  padding: clamp(32px, 5vw, 68px);
+  width: min(92vw, 1280px);
+  height: min(92vh, 920px);
+  min-width: min(760px, calc(100vw - 28px));
+  min-height: min(560px, calc(100vh - 28px));
+  padding: 0;
+  overflow: hidden;
   border: 1px solid rgba(164, 232, 224, 0.46);
   border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(5, 5, 14, 0.58), rgba(2, 20, 18, 0.42)),
-    radial-gradient(circle at 22% 20%, rgba(74, 234, 255, 0.18), transparent 30%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.64), rgba(0, 0, 0, 0.20) 52%, rgba(0, 0, 0, 0.56)),
-    var(--modal-art-image) center / cover no-repeat,
-    rgba(2, 8, 10, 0.86);
+  background: rgba(2, 8, 10, 0.92);
   box-shadow:
     0 0 0 100vmax rgba(0, 0, 0, 0.48),
     0 0 54px rgba(90, 221, 218, 0.22),
@@ -441,6 +434,16 @@ canvas {
     transform 220ms ease;
 }
 
+.jelly-modal__art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  background: #02080a;
+}
+
 .jelly-modal.is-open {
   opacity: 1;
   pointer-events: auto;
@@ -451,6 +454,7 @@ canvas {
   position: absolute;
   top: 18px;
   right: 18px;
+  z-index: 2;
   width: 42px;
   height: 42px;
   color: rgba(236, 252, 255, 0.82);
@@ -460,6 +464,20 @@ canvas {
   font: inherit;
   font-size: 24px;
   line-height: 1;
+}
+
+.jelly-modal__caption {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2;
+  max-width: min(520px, calc(100% - 36px));
+  padding: 14px 16px 15px;
+  border: 1px solid rgba(154, 221, 222, 0.18);
+  border-radius: 8px;
+  background: rgba(2, 8, 10, 0.58);
+  backdrop-filter: blur(10px);
 }
 
 .jelly-modal__index,
@@ -473,24 +491,23 @@ canvas {
 }
 
 .jelly-modal__index {
-  margin: 0 0 22px;
+  margin: 0 0 8px;
   color: rgba(121, 236, 238, 0.72);
-  font-size: clamp(14px, 1.4vw, 18px);
+  font-size: 12px;
 }
 
 .jelly-modal h2 {
-  max-width: 820px;
-  margin: 0 52px 26px 0;
+  margin: 0 0 8px;
   color: rgba(246, 242, 255, 0.94);
-  font-size: clamp(34px, 6vw, 76px);
-  line-height: 1.02;
+  font-size: clamp(18px, 2vw, 28px);
+  line-height: 1.08;
   overflow-wrap: anywhere;
 }
 
 .jelly-modal p:last-child {
   margin: 0;
   color: rgba(188, 221, 226, 0.74);
-  font-size: clamp(14px, 1.6vw, 20px);
+  font-size: 12px;
 }
 
 @media (max-width: 1180px) {
@@ -687,23 +704,21 @@ canvas {
   }
 
   .jelly-modal {
-    width: min(74vw, calc(100vw - 32px));
-    height: min(72vh, calc(100vh - 32px));
+    width: calc(100vw - 32px);
+    height: calc(100vh - 32px);
     min-width: 0;
     min-height: 0;
-    padding: clamp(24px, 5vw, 44px);
   }
 
   .jelly-modal h2 {
-    font-size: clamp(28px, 7vw, 58px);
+    font-size: clamp(17px, 2.8vw, 24px);
   }
 }
 
 @media (max-width: 760px) {
   .jelly-modal {
     width: calc(100vw - 28px);
-    height: min(70vh, calc(100vh - 28px));
-    padding: 24px 18px 22px;
+    height: calc(100vh - 28px);
   }
 
   .jelly-modal__close {
@@ -715,17 +730,25 @@ canvas {
   }
 
   .jelly-modal__index {
-    margin-bottom: 16px;
+    margin-bottom: 7px;
     font-size: 12px;
   }
 
   .jelly-modal h2 {
-    margin: 0 42px 18px 0;
-    font-size: clamp(28px, 10vw, 48px);
+    margin: 0 0 7px;
+    font-size: clamp(16px, 5vw, 22px);
   }
 
   .jelly-modal p:last-child {
-    font-size: 13px;
+    font-size: 11px;
+  }
+
+  .jelly-modal__caption {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    max-width: none;
+    padding: 10px 12px 11px;
   }
 }
 

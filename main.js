@@ -20,6 +20,7 @@ const artworkMenu = document.querySelector('#artwork-menu');
 const artworkMenuPanel = document.querySelector('[data-artwork-menu-panel]');
 const artworkMenuToggle = document.querySelector('#artwork-menu-toggle');
 const jellyModal = document.querySelector('#jelly-modal');
+const jellyModalArt = document.querySelector('#jelly-modal-art');
 const jellyModalClose = document.querySelector('#jelly-modal-close');
 const jellyModalIndex = document.querySelector('#jelly-modal-index');
 const jellyModalTitle = document.querySelector('#jelly-modal-title');
@@ -36,7 +37,7 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'nikita-hood-art-v59';
+const ASSET_VERSION = 'nikita-hood-art-v60';
 const NIKITA_ART_PATHS = Array.from(
   { length: ACTIVE_JELLYFISH_COUNT },
   (_, index) => `./assets/nikita/art-${String(index).padStart(2, '0')}.jpg?v=${ASSET_VERSION}`
@@ -1651,7 +1652,10 @@ function setJellyModalOpen(open, index = focusedCardIndex) {
     if (jellyModalIndex) jellyModalIndex.textContent = String(index + 1).padStart(2, '0');
     if (jellyModalTitle) jellyModalTitle.textContent = title;
     if (jellyModalCopy) jellyModalCopy.textContent = 'ORBIT NODE SELECTED';
-    jellyModal.style.setProperty('--modal-art-image', `url("${artPath}")`);
+    if (jellyModalArt) {
+      jellyModalArt.src = artPath;
+      jellyModalArt.alt = title;
+    }
     jellyModal.classList.add('is-open');
     jellyModal.setAttribute('aria-hidden', 'false');
     window.__JELLY_MODAL_OPEN = true;
@@ -1659,6 +1663,10 @@ function setJellyModalOpen(open, index = focusedCardIndex) {
   }
   jellyModal.classList.remove('is-open');
   jellyModal.setAttribute('aria-hidden', 'true');
+  if (jellyModalArt) {
+    jellyModalArt.removeAttribute('src');
+    jellyModalArt.alt = '';
+  }
   window.__JELLY_MODAL_OPEN = false;
 }
 
