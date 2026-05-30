@@ -36,10 +36,14 @@ const PUBLISHED_CARD_DISTANCE_OFFSET = 3.45;
 const ACTIVE_JELLYFISH_COUNT = 10;
 const CARD_MOTION_SPEED = 0.78;
 const BASE_VIEW_HEIGHT = 12.2;
-const ASSET_VERSION = 'nikita-hood-art-v58';
+const ASSET_VERSION = 'nikita-hood-art-v59';
 const NIKITA_ART_PATHS = Array.from(
   { length: ACTIVE_JELLYFISH_COUNT },
   (_, index) => `./assets/nikita/art-${String(index).padStart(2, '0')}.jpg?v=${ASSET_VERSION}`
+);
+const NIKITA_MODAL_ART_PATHS = Array.from(
+  { length: ACTIVE_JELLYFISH_COUNT },
+  (_, index) => `./assets/nikita-modal/modal-${String(index).padStart(2, '0')}.png?v=${ASSET_VERSION}`
 );
 const NIKITA_ART_TITLES = [
   'SUSTAINABLE HORIZONS',
@@ -1643,7 +1647,7 @@ function setJellyModalOpen(open, index = focusedCardIndex) {
   if (!jellyModal) return;
   if (open && index !== null && index !== undefined) {
     const title = cardTitles[index % cardTitles.length].replace(/\n/g, ' ');
-    const artPath = NIKITA_ART_PATHS[index % NIKITA_ART_PATHS.length];
+    const artPath = NIKITA_MODAL_ART_PATHS[index % NIKITA_MODAL_ART_PATHS.length];
     if (jellyModalIndex) jellyModalIndex.textContent = String(index + 1).padStart(2, '0');
     if (jellyModalTitle) jellyModalTitle.textContent = title;
     if (jellyModalCopy) jellyModalCopy.textContent = 'ORBIT NODE SELECTED';
